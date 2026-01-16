@@ -1,0 +1,7 @@
+# AutoGen and RAG
+pyautogen[retrievechat]>=0.2.0
+chromadb>=0.4.0
+sentence-transformers==2.7.0
+
+# Standard Utils
+python-dotenv==1.0.1
