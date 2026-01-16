@@ -1,39 +1,46 @@
-# Environment variables
-.env
-
-# Python
+# Python Environment
+.venv/
+venv/
+env/
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+*.pyc
+*.pyo
+*.pyd
 
-# RAG Caches (auto-generated)
-src/ai/cache/
-cache/
+# Configuration & Secrets
+.env
+.env.*
+! .env.example
 
-# Embedding Model (optional, 90MB, can be downloaded via setup script)
-src/ai/models/
-
-# Personal development files
-.claude/
-.cursor/
-
-# IDE
+# IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# OS
-.DS_Store
-Thumbs.db
+# AutoGen & RAG Databases
+# ChromaDB persistence folders (auto-generated)
+tmp/
+chromadb/
+.chromadb/
+chroma_db/
+*.db
+*.sqlite3
+cache/
+
+# Microsoft AutoGen Specific
+.cache/
+autogen_cache/
 
 # Logs
 *.log
+logs/
 
-# Distribution / packaging
+# Operating System common files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
 dist/
 build/
 *.egg-info/
