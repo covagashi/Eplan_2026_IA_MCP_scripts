@@ -1,101 +1,109 @@
-# EPLAN AutoGen Assistant 🚀
+# EPLAN Automation Tools
 
-**An AI-powered Coding Assistant for EPLAN Electric P8, built with Microsoft AutoGen.**
+This repository contains tools for automating EPLAN Electric P8 using AI assistants.
 
-This tool uses a **Native RAG (Retrieval-Augmented Generation)** architecture to find relevant EPLAN API documentation and valid script examples, then generates precise C# code for your automation needs.
+## MCP Server (Recommended)
 
-> ⚠️ **Status**: MVP (Minimum Viable Product) - Standby Development, Eplan will release an AI assistant for P8 in the future.
+The **MCP Server** (`mcp_server/`) allows Claude to control EPLAN directly through the Model Context Protocol.
+
+### What is MCP?
+
+**MCP (Model Context Protocol)** is an open standard that allows AI assistants like Claude to interact with external tools and services. Instead of just generating code, Claude can actually *execute* actions in EPLAN in real-time.
+
+With MCP, you can:
+- Connect to a running EPLAN instance
+- Execute EPLAN actions directly from Claude
+- Get real-time feedback on operations
+- Automate complex workflows through natural conversation
+
+### Quick Start
+
+1. Install dependencies:
+   ```bash
+   pip install pythonnet mcp
+   ```
+
+2. Configure Claude CLI (edit `~/.claude/settings.json`):
+   ```json
+   {
+     "mcpServers": {
+       "eplan": {
+         "command": "python",
+         "args": ["YOUR_PATH\\LazyScriptingEplan\\mcp_server\\server.py"]
+       }
+     }
+   }
+   ```
+
+3. Restart Claude CLI and start using EPLAN tools!
+
+See [mcp_server/README.md](mcp_server/README.md) for detailed installation instructions.
 
 ---
 
-##  Key Features
+## Adding New EPLAN Actions
 
-*   **🤖 EPLAN Engineer Agent**: An expert AI agent that understands EPLAN's Object Model.
-*   **📚 Native RAG Engine**: Uses **ChromaDB** to index and search over **17,000+** knowledge files (API Docs & Script Examples).
-*   **🐍 Pure Python**: Built purely on `pyautogen`, removing complex custom logic in favor of industry standards.
-*   **🔒 Corporate Friendly**: Designed to run offline (after initial model download) and works alongside corporate firewalls.
+The MCP server is designed to be easily extensible. Here's how to add new EPLAN actions:
 
----
 
-## Quick Start
+### Step 1: Add the Function to `eplan_actions.py`
 
-### Prerequisites
-*   **Python 3.10+** (installed and added to PATH)
-*   **Internet Access** (Only for the first run to download models from HuggingFace)
-*   **Gemini API Key** (Set in `.env`)
+```python
+def example_project(project_path: str) -> dict:
+    """
+    Open an EPLAN project.
+    Action: example
+    """
+    manager = get_manager(TARGET_VERSION)
 
-### Installation
+    if not manager.connected:
+        return {"success": False, "message": "Not connected to EPLAN"}
 
-1.  **Clone the repository**
-2.  **Configure API Key**
-    Create a `.env` file in the root directory:
-    ```env
-    GEMINI_API_KEY=AIxxxx...
-    ```
-3.  **Run the Assistant**
-    Just double-click:
-    ```bash
-    run_agent.bat
-    ```
-
-> **Note**: The first run will take a few minutes. The system needs to download the embedding models and index the 17,000 document chunks into the local vector database. **Be patient!**
-
----
-
-##  Architecture
-
-The system uses a simple 2-Agent "Tool Use" pattern:
-
-```mermaid
-graph TD
-    User((User)) -->|Query| Admin[RetrieveUserProxyAgent]
-    Admin -->|Retrieves Context| DB[(ChromaDB)]
-    Admin -->|Sends Context + Query| Engineer[AssistantAgent]
-    Engineer -->|Generates Code| Code[C# Script]
+    # Note: Use forward slashes or escape backslashes in the path
+    return manager.execute_action(f'example /param1:"{project_path}"')
 ```
 
-1.  **RetrieveUserProxyAgent ("Admin")**:
-    *   Acts as the interface for the user.
-    *   Automatically searches the `src/ai/Knowledge/` folder for relevant info when you ask a question.
-    *   Injects that info into the conversation context.
+### Step 3: Register the Tool in `server.py`
 
-2.  **AssistantAgent ("EplanEngineer")**:
-    *   Receives the user query + the retrieved context.
-    *   Uses Gemini 2.5 Flash to generate compilation-ready C# code based *strictly* on the provided examples.
+```python
+from eplan_actions import close_project, example_project  # Add your import
+
+@mcp.tool()
+def example_project(project_path: str) -> str:
+    """Open an EPLAN project by path."""
+    return json.dumps(example_project(project_path), indent=2)
+```
+
+### Step 4: Restart Claude CLI
+
+The new tool will be available after restarting Claude CLI.
+
+### Tips for Adding Actions
+
+1. **Test in EPLAN first** - Use EPLAN's scripting to verify the action works
+2. **Check parameters** - Each action has specific parameters; refer to the API documentation
+3. **Handle paths carefully** - Windows paths need escaping or use forward slashes
+4. **Add meaningful docstrings** - Claude uses the docstring to understand when to use the tool
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 LazyScriptingEplan/
-├── src/
-│   ├── ai/
-│   │   └── Knowledge/          # The Brain (PDFs, JSONs, Markdowns)
-│   └── app.py                  # Main AutoGen Application logic
+├── mcp_server/                 # MCP Server for Claude integration
+│   ├── server.py               # Main MCP server with tool definitions
+│   ├── eplan_connection.py     # EPLAN connection management
+│   ├── eplan_actions.py        # EPLAN action implementations
+│   └── README.md               # MCP installation guide
 │
-├── .venv/                      # Isolated Python Environment (Auto-generated)
-├── run_agent.bat               # Smart Launcher (Handles venv & deps)
-├── requirements.txt            # Dependencies (pyautogen, chromadb, etc.)
 └── README.md                   # This file
 ```
 
 ---
 
-## 🔧 Troubleshooting
+## Resources
 
-### "ModuleNotFoundError"
-Always use `run_agent.bat`. Do not try to run `python app.py` directly unless you have manually activated the `.venv`. The batch script handles isolation automatically.
-
-### SSL / Certificate Errors
-If you are behind a strict corporate proxy ("Zscaler", "Netskope", etc.), the initial model download might fail.
-*   **Solution**: Run the first setup on a personal network (Home WiFi/Hotspot). Once the models are cached in `.cache/`, you can work offline in the office.
-
----
-
-## 🤝 Credits
-
-*   **Microsoft AutoGen**: For the agent orchestration framework.
-*   **ChromaDB**: For the vector database engine.
-*   **Google Gemini**: For the LLM intelligence.
-*   **Suplanus**: For the base EPLAN script examples.
+- [EPLAN API Documentation](https://www.eplan.help/)
+- [MCP Protocol Specification](https://modelcontextprotocol.io/)
+- [Claude Code Documentation](https://docs.anthropic.com/claude-code)
