@@ -1,10 +1,11 @@
 # EPLAN Automation Tools
 
 This repository contains tools for automating EPLAN Electric P8 using AI assistants.
+Currently is 100% functional
 
 ## MCP Server (Recommended)
 
-The **MCP Server** (`mcp_server/`) allows Claude to control EPLAN directly through the Model Context Protocol.
+The **MCP Server** (`mcp_server/`) allows any AI to control EPLAN directly through the Model Context Protocol.
 
 ### What is MCP?
 
@@ -38,6 +39,8 @@ With MCP, you can:
 3. Restart Claude CLI and start using EPLAN tools!
 
 See [mcp_server/README.md](mcp_server/README.md) for detailed installation instructions.
+
+![Claude cli configured](image.png)
 
 ---
 
@@ -78,6 +81,8 @@ def example_project(project_path: str) -> str:
 
 The new tool will be available after restarting Claude CLI.
 
+![Eplan test](image-1.png)
+
 ### Tips for Adding Actions
 
 1. **Test in EPLAN first** - Use EPLAN's scripting to verify the action works
@@ -87,7 +92,7 @@ The new tool will be available after restarting Claude CLI.
 
 ---
 
-## Project Structure
+## OG Project Structure
 
 ```
 LazyScriptingEplan/
