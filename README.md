@@ -17,28 +17,75 @@ With MCP, you can:
 - Get real-time feedback on operations
 - Automate complex workflows through natural conversation
 
-### Quick Start
+### Prerequisites
 
-1. Install dependencies:
-   ```bash
-   pip install pythonnet mcp
+- **Python 3.10+** installed and added to PATH
+- **EPLAN Electric P8** installed (2024 or later recommended)
+- **Claude Code CLI** installed ([Installation guide](https://docs.anthropic.com/claude-code))
+
+### Installation Steps
+
+#### Step 1: Install Python Dependencies
+
+Open a terminal and run:
+
+```bash
+pip install pythonnet mcp
+```
+
+#### Step 2: Configure Claude Code CLI
+
+Add the MCP server to Claude Code. Replace `YOURPATH` with the actual path to the scripts folder:
+
+```bash
+claude mcp add eplan -- python YOURPATH\Eplan_2026_IA_MCP_scripts\mcp_server\server.py
+```
+
+**Example with full path:**
+```bash
+claude mcp add eplan -- python D:\1_GENERAL\Eplan_2026_IA_MCP_scripts\mcp_server\server.py
+```
+
+#### Step 3: Verify Configuration
+
+Check that the MCP server was added correctly:
+
+```bash
+claude mcp list
+```
+
+You should see `eplan` in the list of configured MCP servers.
+
+#### Step 4: Start EPLAN
+
+1. Open EPLAN Electric P8
+2. Make sure it's fully loaded before connecting
+
+#### Step 5: Start Claude Code and Connect
+
+1. Open a terminal and run `claude`
+2. Ask Claude to connect to EPLAN:
    ```
-
-2. Configure Claude CLI (edit `~/.claude/settings.json`):
-   ```json
-   {
-     "mcpServers": {
-       "eplan": {
-         "command": "python",
-         "args": ["YOUR_PATH\\LazyScriptingEplan\\mcp_server\\server.py"]
-       }
-     }
-   }
+   connect to eplan
    ```
+3. Claude will auto-detect the running EPLAN instance and connect
 
-3. Restart Claude CLI and start using EPLAN tools!
+### Troubleshooting
 
-See [mcp_server/README.md](mcp_server/README.md) for detailed installation instructions.
+| Issue | Solution |
+|-------|----------|
+| "pythonnet not found" | Run `pip install pythonnet` |
+| "Cannot connect to EPLAN" | Make sure EPLAN is running and fully loaded |
+| "MCP server not found" | Check the path in `claude mcp list` and verify the file exists |
+| "Port not found" | EPLAN API server may not be running; restart EPLAN |
+
+### Uninstalling
+
+To remove the MCP server from Claude Code:
+
+```bash
+claude mcp remove eplan
+```
 
 ![Claude cli configured](image.png)
 
