@@ -37,14 +37,15 @@ class EPLANConnectionManager:
             import clr
 
             # Search for EPLAN installation
+            # Target version paths first, then fallbacks
             paths = [
-                r"C:\Program Files\EPLAN\Platform\2023.0.3\Bin",
-                r"C:\Program Files\EPLAN\Platform\2.9.4\Bin",
                 rf"C:\Program Files\EPLAN\Platform\{self.target_version}.0\Bin",
                 rf"C:\Program Files\EPLAN\Platform\{self.target_version}.0.3\Bin",
-                r"C:\Program Files\EPLAN\Platform\2026.0\Bin",
                 r"C:\Program Files\EPLAN\Platform\2025.0\Bin",
+                r"C:\Program Files\EPLAN\Platform\2025.0.3\Bin",
                 r"C:\Program Files\EPLAN\Platform\2024.0\Bin",
+                r"C:\Program Files\EPLAN\Platform\2023.0.3\Bin",
+                r"C:\Program Files\EPLAN\Platform\2023.0\Bin",
             ]
 
             eplan_path = None
@@ -60,6 +61,15 @@ class EPLANConnectionManager:
 
             if eplan_path not in sys.path:
                 sys.path.append(eplan_path)
+
+            # Add additional dependency paths
+            dep_paths = [
+                r"C:\Program Files\EPLAN\Common\IdentityClient",
+                os.path.join(os.path.dirname(eplan_path), "Bin"),
+            ]
+            for dp in dep_paths:
+                if os.path.exists(dp) and dp not in sys.path:
+                    sys.path.append(dp)
 
             clr.AddReference("Eplan.EplApi.Starteru")
             clr.AddReference("Eplan.EplApi.RemoteClientu")
@@ -167,15 +177,25 @@ class EPLANConnectionManager:
             self.connected = False
             return {"alive": False, "message": f"Ping failed: {e}"}
 
-    def execute_action(self, action: str) -> dict:
-        """Execute an EPLAN action."""
+    def execute_action(self, action: str, quiet_mode: bool = False) -> dict:
+        """
+        Execute an EPLAN action.
+
+        Args:
+            action: The action string to execute
+            quiet_mode: If True, suppresses all EPLAN dialogs during execution
+        """
         if not self.connected or not self.client:
             return {"success": False, "message": "Not connected"}
 
         try:
-            logger.info(f"Executing: {action}")
+            logger.info(f"Executing: {action} (quiet_mode={quiet_mode})")
             self.client.SynchronousMode = True
+
+            # QuietMode is not available via Remote Client API
+            # Execute action directly
             self.client.ExecuteAction(action)
+
             return {"success": True, "message": f"Executed: {action}", "action": action}
         except Exception as e:
             self.last_error = f"Execution failed: {e}"

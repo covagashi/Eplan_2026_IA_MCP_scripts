@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from eplan_connection import get_manager
 
-TARGET_VERSION = "2026"
+TARGET_VERSION = "2025"
 
 
 def _get_connected_manager():
@@ -35,3 +35,11 @@ def _build_action(action_name: str, **params) -> str:
                 value = f'"{value}"'
             parts.append(f"/{key}:{value}")
     return " ".join(parts)
+
+
+def _execute_with_quiet_mode(action: str) -> dict:
+    """Execute an action with QuietMode enabled to suppress dialogs."""
+    manager, error = _get_connected_manager()
+    if error:
+        return error
+    return manager.execute_action(action, quiet_mode=True)

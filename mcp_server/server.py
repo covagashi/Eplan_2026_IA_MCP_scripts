@@ -13,9 +13,9 @@ import os
 from typing import Optional, List
 from mcp.server.fastmcp import FastMCP
 from eplan_connection import get_manager
-import eplan_actions as actions
+import actions
 
-TARGET_VERSION = "2026"
+TARGET_VERSION = "2025"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 mcp = FastMCP("EPLAN MCP Server")

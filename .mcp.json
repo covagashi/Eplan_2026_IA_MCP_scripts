@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "eplan": {
+      "command": "python",
+      "args": ["D:\\Eplan_2026_IA_MCP_scripts\\mcp_server\\server.py"]
+    }
+  }
+}

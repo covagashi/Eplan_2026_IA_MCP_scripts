@@ -154,6 +154,18 @@ LazyScriptingEplan/
 
 ---
 
+## Changing EPLAN Version
+
+The target EPLAN version is configured in **3 files**. Update all of them when switching versions (e.g. from `"2025"` to `"2026"`):
+
+| File | What to change |
+|------|----------------|
+| `mcp_server/server.py` | `TARGET_VERSION = "2025"` |
+| `mcp_server/actions/_base.py` | `TARGET_VERSION = "2025"` |
+| `mcp_server/eplan_connection.py` | Default parameter in `__init__` and `get_manager` (`target_version: str = "2025"`) |
+
+---
+
 ## Resources
 
 - [EPLAN API Documentation](https://www.eplan.help/)

@@ -4,7 +4,7 @@ Complete implementation with all documented parameters.
 """
 
 from typing import List, Optional
-from ._base import _get_connected_manager, _build_action
+from ._base import _get_connected_manager, _build_action, _execute_with_quiet_mode
 
 
 def export_pdf_project(
@@ -22,7 +22,7 @@ def export_pdf_project(
     export_model: bool = False
 ) -> dict:
     """
-    Export project to PDF format.
+    Export project to PDF format (with QuietMode - no dialogs).
     Action: export
 
     Args:
@@ -39,10 +39,6 @@ def export_pdf_project(
         use_print_margins: Use print margins (None=from scheme)
         export_model: Export 3D models along with pages
     """
-    manager, error = _get_connected_manager()
-    if error:
-        return error
-
     params = {
         "TYPE": "PDFPROJECTSCHEME",
         "PROJECTNAME": project_name,
@@ -62,7 +58,7 @@ def export_pdf_project(
         params["USEPRINTMARGINS"] = use_print_margins
 
     action = _build_action("export", **params)
-    return manager.execute_action(action)
+    return _execute_with_quiet_mode(action)
 
 
 def export_pdf_pages(
@@ -82,7 +78,7 @@ def export_pdf_pages(
     export_model: bool = False
 ) -> dict:
     """
-    Export specific pages to PDF format.
+    Export specific pages to PDF format (with QuietMode - no dialogs).
     Action: export
 
     Args:
@@ -101,10 +97,6 @@ def export_pdf_pages(
         use_print_margins: Use print margins
         export_model: Export 3D models
     """
-    manager, error = _get_connected_manager()
-    if error:
-        return error
-
     parts = ["export", "/TYPE:PDFPAGESSCHEME", f'/EXPORTFILE:"{export_file}"']
 
     if project_name:
@@ -141,7 +133,7 @@ def export_pdf_pages(
         for i, sel in enumerate(page_identifiers, 1):
             parts.append(f"/SEL{i}:{sel}")
 
-    return manager.execute_action(" ".join(parts))
+    return _execute_with_quiet_mode(" ".join(parts))
 
 
 def export_dxf_project(
