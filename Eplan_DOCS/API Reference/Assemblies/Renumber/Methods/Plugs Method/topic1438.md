@@ -1,0 +1,113 @@
+# Plugs(Function[],PlugsSequence,TerminalsPotential,TerminalsPotential,TerminalsPotential,Boolean,String,Int32,Int32,Boolean,Boolean) Method
+
+**Source URL:** https://www.eplan.help/en-us/Infoportal/Content/api/2026/topic1438.html
+
+---
+
+Method for renumbering plugs specified by the collection pFunctions.
+
+Syntax
+
+**C#**
+
+
+
+public void Plugs( 
+
+   Function[] pFunctions,
+
+   Renumber.Enums.PlugsSequence eSequence,
+
+   Renumber.Enums.TerminalsPotential ePotential_N,
+
+   Renumber.Enums.TerminalsPotential ePotential_PE,
+
+   Renumber.Enums.TerminalsPotential ePotential_SH,
+
+   bool bKeepAlphanumeric,
+
+   string strScheme,
+
+   int nStartValue,
+
+   int nIncrement,
+
+   bool bPermitSortChange,
+
+   bool bFillGaps
+
+)
+
+public:
+
+void Plugs( 
+
+   array<Function^>^ pFunctions,
+
+   Renumber.Enums.PlugsSequence eSequence,
+
+   Renumber.Enums.TerminalsPotential ePotential_N,
+
+   Renumber.Enums.TerminalsPotential ePotential_PE,
+
+   Renumber.Enums.TerminalsPotential ePotential_SH,
+
+   bool bKeepAlphanumeric,
+
+   String^ strScheme,
+
+   int nStartValue,
+
+   int nIncrement,
+
+   bool bPermitSortChange,
+
+   bool bFillGaps
+
+)
+
+
+#### Parameters
+
+*pFunctions*
+:   Plugs to be renumbered.
+
+*eSequence*
+:   Mode to use for numbering, given by a member of enum PlugSequence.
+
+*ePotential\_N*
+:   Parameter to determine, N plugs will be treated during numbering. Use value from enum [Renumber.Enums.TerminalsPotential](Eplan.EplApi.HEServicesu~Eplan.EplApi.HEServices.Renumber+Enums+TerminalsPotential.html).
+
+*ePotential\_PE*
+:   Parameter to determine, how PE plugs will be treated during numbering. Use value from enum [Renumber.Enums.TerminalsPotential](Eplan.EplApi.HEServicesu~Eplan.EplApi.HEServices.Renumber+Enums+TerminalsPotential.html).
+
+*ePotential\_SH*
+:   Parameter to determine, how SH plugs will be treated during numbering. Use value from enum [Renumber.Enums.TerminalsPotential](Eplan.EplApi.HEServicesu~Eplan.EplApi.HEServices.Renumber+Enums+TerminalsPotential.html).
+
+*bKeepAlphanumeric*
+:   not used anymore
+
+*strScheme*
+:   Numbering scheme.
+
+*nStartValue*
+:   Start value.
+
+*nIncrement*
+:   Step width.
+
+*bPermitSortChange*
+:   Permit sort change.
+
+*bFillGaps*
+:   Fill gaps.
+
+Exceptions
+
+| Exception | Description |
+| --- | --- |
+| **ArgumentNullException** | Thrown, if an argument is set to null. |
+| **ArgumentException** | Thrown in case of invalid parameters, e.g. the specified project does not exist or is invalid. |
+| **ApplicationException** | \Internal interface for numbering could not be created. |
+| [Eplan.EplApi.Base.BaseException](Eplan.EplApi.Baseu~Eplan.EplApi.Base.BaseException.html) | An error occurred during numbering. |
+| **InvalidScheme** | An error occurrs when used scheme name doesn't exist |

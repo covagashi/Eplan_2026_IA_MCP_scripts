@@ -1,0 +1,20 @@
+# Remove Method
+
+**Source URL:** https://www.eplan.help/en-us/Infoportal/Content/api/2026/Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.ConnectionPointsInfo~Remove.html
+
+---
+
+Removes the connection points info from the [Project](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Project.html).
+
+Syntax
+
+**C#**
+
+
+
+public void Remove()
+
+public:
+
+void Remove();
+

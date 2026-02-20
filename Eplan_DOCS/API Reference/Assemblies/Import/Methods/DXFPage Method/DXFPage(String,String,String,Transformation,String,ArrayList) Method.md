@@ -1,0 +1,84 @@
+# DXFPage(String,String,String,Transformation,String,ArrayList) Method
+
+**Source URL:** https://www.eplan.help/en-us/Infoportal/Content/api/2026/Eplan.EplApi.HEServicesu~Eplan.EplApi.HEServices.Import~DXFPage(String,String,String,Transformation,String,ArrayList).html
+
+---
+
+Imports a DXF or DWG file into an existing page. You have the possibility to move and scale the drawings.
+
+Syntax
+
+**C#**
+
+
+
+public void DXFPage( 
+
+   string strDXFFileName,
+
+   string strFullLinkFileName,
+
+   string strPageName,
+
+   Transformation oTransformation,
+
+   string strScheme,
+
+   ArrayList importedPlacements
+
+)
+
+public:
+
+void DXFPage( 
+
+   String^ strDXFFileName,
+
+   String^ strFullLinkFileName,
+
+   String^ strPageName,
+
+   Transformation^ oTransformation,
+
+   String^ strScheme,
+
+   ArrayList^ importedPlacements
+
+)
+
+
+#### Parameters
+
+*strDXFFileName*
+:   Full file name of the CAD drawing to be imported.
+
+*strFullLinkFileName*
+:   Full link file name of the project.
+
+*strPageName*
+:   Name of the page into which the CAD drawing will be placed.
+
+*oTransformation*
+:   Information about the scaling and the insertion point on the page.
+
+*strScheme*
+:   Name of the scheme used for the import.
+
+*importedPlacements*
+:   An ArrayList that is filled with imported Placement objects.
+
+Exceptions
+
+| Exception | Description |
+| --- | --- |
+| **ArgumentException** | Thrown in case of invalid arguments. |
+| **SecurityException** | Access rights to the \file system are missing. |
+| **ArgumentNullException** | null was passed to a parameter. |
+| **ApplicationException** | \Internal interface necessary for the import cannot be created. |
+| **NotSupportedException** | An argument contained invalid characters, e.g. a path contained a '\:'. |
+| **PathTooLongException** | Invalid path. |
+| [Eplan.EplApi.Base.BaseException](Eplan.EplApi.Baseu~Eplan.EplApi.Base.BaseException.html) | An error occurred during the import. Please refer to the exception message. |
+
+Remarks
+
+This method uses a scheme from "USER.DXF.SCHEMES". All necessary settings for DXF import are set in this scheme. If you pass an empty string to "strScheme", the last used scheme will be used which is currently set in GUI. If no scheme does exist with the given scheme name, an exception will be thrown.

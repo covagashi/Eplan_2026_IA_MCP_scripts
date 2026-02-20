@@ -1,0 +1,40 @@
+# Methods
+
+**Source URL:** https://www.eplan.help/en-us/Infoportal/Content/api/2026/Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Page_methods.html
+
+---
+
+For a list of all members of this type, see [Page members](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Page_members.html).
+
+Public Methods
+
+|  | Name | Description |
+| --- | --- | --- |
+| Public Method | [ConvertToGraphics](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Page~ConvertToGraphics.html) | Converts all symbols and connections on the page into graphical instances. Graphical instances of a given symbol are automatically grouped. |
+| Public Method | [CopyTo](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Page~CopyTo.html) | Overloaded. Creates copy of this page. |
+| Public Method | [Create](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Page~Create.html) | Overloaded. Creates a new Page object. It is placed in the project under location given as parameters. |
+| Public Method | [DeepUnGroup](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group~DeepUnGroup.html) | Overloaded. Remove all [Placement](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Placement.html)s only from a group and it's sub groups. If true method will remove also SubGroups. (Inherited from [Eplan.EplApi.DataModel.Group](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group.html)) |
+| Public Method | [Dispose()](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject~Dispose().html) | Destructor. (Inherited from [Eplan.EplApi.DataModel.StorableObject](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject.html)) |
+| Public Method | [Equals](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject~Equals.html) | Operator of comparison implementation. Checks if two StorableObjects refer to the same object in the project. (Inherited from [Eplan.EplApi.DataModel.StorableObject](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject.html)) |
+| Public Method | [GetBoundingBox](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Page~GetBoundingBox.html) | Overridden. Placement bounding box. Bounding box is a rectangle which contain this placement. It can be also used to determine placement size. |
+| Public Method | [GetHashCode](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject~GetHashCode.html) | Serves as the default hash function. (Inherited from [Eplan.EplApi.DataModel.StorableObject](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject.html)) |
+| Public Method | [GetTypeName](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject~GetTypeName.html) | Returns object type name. (Inherited from [Eplan.EplApi.DataModel.StorableObject](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject.html)) |
+| Public Method | [GetWriteProtectionFlagSet](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Page~GetWriteProtectionFlagSet.html) | Checks if a specific write protection kind was set. |
+| Public Method | [InsertSubPlacement](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group~InsertSubPlacement.html) | Insert [Placement](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Placement.html) to a group. (Inherited from [Eplan.EplApi.DataModel.Group](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group.html)) |
+| Public Method | [InsertSubPlacements](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group~InsertSubPlacements.html) | Insert [Placement](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Placement.html)s to a group. (Inherited from [Eplan.EplApi.DataModel.Group](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group.html)) |
+| Public Method | [IsEditable](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group~IsEditable.html) | Check if the Group is editable. (Inherited from [Eplan.EplApi.DataModel.Group](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group.html)) |
+| Public Method | [IsGroupValid](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group~IsGroupValid.html) | Returns true, if group is valid if not, the group should be dissolved (Inherited from [Eplan.EplApi.DataModel.Group](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group.html)) |
+| Public Method | [LockObject](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject~LockObject().html) | Tries to lock current object in database for exclusive access. Throws [Eplan.EplApi.Base.LockingException](Eplan.EplApi.Baseu~Eplan.EplApi.Base.LockingException.html) on failure. (Inherited from [Eplan.EplApi.DataModel.StorableObject](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject.html)) |
+| Public Method | [Move](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group~Move.html) | Moves the group (Inherited from [Eplan.EplApi.DataModel.Group](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group.html)) |
+| Public Method | [PauseWriteProtection](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Page~PauseWriteProtection.html) | Temporarily disables write protection. Note that current write protection flags are not cleared. |
+| Public Method | [Remove](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Page~Remove.html) | Overridden. Removes placement. |
+| Public Method | [RemoveSubPlacement](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group~RemoveSubPlacement.html) | Overloaded. Remove [Placement](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Placement.html) from the group and from the project. The Placement object passed into this method is no longer valid. (Inherited from [Eplan.EplApi.DataModel.Group](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group.html)) |
+| Public Method | [RemoveSubPlacements](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group~RemoveSubPlacements.html) | Overloaded. Remove [Placement](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Placement.html)s from the group and from the project. The Placement objects passed into this method are no longer valid. (Inherited from [Eplan.EplApi.DataModel.Group](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group.html)) |
+| Public Method | [Scale](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Placement~Scale.html) | Overloaded. Scales the placement (or group of placements) by the specified factors in X and Y axis with scaling origin point specified by the ptOrigin parameter. (Inherited from [Eplan.EplApi.DataModel.Placement](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Placement.html)) |
+| Public Method | [SetName](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Page~SetName(PagePropertyList).html) | Sets the name of the page. Name parts should be given in the PagePropertyList. |
+| Public Method | [SetProject](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Page~SetProject.html) | Assigns a page to a given project. |
+| Public Method | [SmartLock](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject~SmartLock.html) | Tries to lock current object. If object is [Placement](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Placement.html) - it's page will be locked as well; [Eplan.EplApi.DataModel.E3D.Placement3D](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.E3D.Placement3D.html) locks it's installation space; [Function](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Function.html) locks all it's connections and connection definition points; [Page](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Page.html) locks all placements from this page. Throws [Eplan.EplApi.Base.LockingException](Eplan.EplApi.Baseu~Eplan.EplApi.Base.LockingException.html) on failure. (Inherited from [Eplan.EplApi.DataModel.StorableObject](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject.html)) |
+| Public Method | [ToStringIdentifier](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject~ToStringIdentifier.html) | Returns this object as string identifier. (Inherited from [Eplan.EplApi.DataModel.StorableObject](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.StorableObject.html)) |
+| Public Method | [UnGroup](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group~UnGroup.html) | Overloaded. Remove [Placement](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Placement.html)s only from a group. (Inherited from [Eplan.EplApi.DataModel.Group](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.Group.html)) |
+
+

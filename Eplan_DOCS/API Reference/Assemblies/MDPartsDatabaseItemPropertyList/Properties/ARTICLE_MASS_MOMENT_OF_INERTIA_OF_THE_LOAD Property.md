@@ -1,0 +1,34 @@
+# ARTICLE_MASS_MOMENT_OF_INERTIA_OF_THE_LOAD Property
+
+**Source URL:** https://www.eplan.help/en-us/Infoportal/Content/api/2026/topic1569.html
+
+---
+
+Mass moment of inertia of the load # 26443.
+
+Syntax
+
+**C#**
+
+
+
+public MDPropertyValue ARTICLE_MASS_MOMENT_OF_INERTIA_OF_THE_LOAD {get; set;}
+
+public:
+
+property MDPropertyValue^ ARTICLE_MASS_MOMENT_OF_INERTIA_OF_THE_LOAD {
+
+   MDPropertyValue^ get();
+
+   void set (    MDPropertyValue^ value);
+
+}
+
+
+#### Property Value
+
+Returns property value of type System.String.
+
+Remarks
+
+Describes the resistance of a load to changes in its rotation around an axis. This is a measure of how difficult it is to change the rotational speed of the load and depends on the mass distribution of the load relative to the axis of rotation. Example: In the case of a rotating flywheel in a machine, the mass moment of inertia indicates the torque required to change the rotational speed of the flywheel.

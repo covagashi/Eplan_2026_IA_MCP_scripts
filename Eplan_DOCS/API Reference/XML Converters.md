@@ -1,0 +1,48 @@
+# XML Converters
+
+**Source URL:** https://www.eplan.help/en-us/Infoportal/Content/api/2026/API XML Converters.html
+
+---
+
+This is the list of the available XML converters that can be used in import and export methods. They are divided into categories:
+
+- [Category DeviceListXmlConverter](DeviceListXmlConverter.html)
+- - [XDLCsvCommaSepImporterExporter](XDLCsvCommaSepImporterExporter.html)
+  - [XDLCsvImporterExporter](XDLCsvImporterExporter.html)
+  - [XDLTxtImporterExporter](XDLTxtImporterExporter.html)
+  - [XDLXmlExporter](XDLXmlExporter.html)
+- [Category LanguageDbXmlConverter](LanguageDbXmlConverter.html)
+- - [XTrLanguageDbXml2E21UnicodeTabConverter](XTrLanguageDbXml2E21UnicodeTabConverter.html)
+  - [XTrLanguageDbXml2TabConverterImpl](XTrLanguageDbXml2TabConverterImpl.html)
+- [Category PartsListXmlConverter](PartsListXmlConverter.html)
+- - [XPalCSVConverter](XPalCSVConverter.html)
+  - [XPalXmlExporter](XPalXmlExporter.html)
+- [Category XPamExport](XPamExport.html)
+- - [IXPartsImportExportEdz](IXPartsImportExportEdz.html)
+  - [XPamExportXml](XPamExportXml.html)
+- [Category XPamImport](XPamImport.html)
+- - [XPamImportXml](XPamImportXml.html)
+- [Category PLCXmlConverter](PLCXmlConverter.html)
+- - [PlcDcAMLExchangerGeneral](PlcDcAMLExchangerGeneral.html)
+  - [PlcDcExchangerBeckhoffTC3AML](PlcDcExchangerBeckhoffTC3AML.html)
+  - [PlcDcExchangerBoschAML](PlcDcExchangerBoschAML.html)
+  - [PlcDcExchangerLogiCals3AML](PlcDcExchangerLogiCals3AML.html)
+  - [PlcDcExchangerMitsubishiAML](PlcDcExchangerMitsubishiAML.html)
+  - [PlcDcExchangerMitsubishi110AML](PlcDcExchangerMitsubishi110AML.html)
+  - [PlcDcExchangerOmron120AML](PlcDcExchangerOmron120AML.html)
+  - [PlcDcExchangerPhoenixContactAML](PlcDcExchangerPhoenixContactAML.html)
+  - [PlcDcExchangerRockwellArchitectAML](PlcDcExchangerRockwellArchitectAML.html)
+  - [PlcDcExchangerSiemensTIA15AML](PlcDcExchangerSiemensTIA15AML.html)
+  - [PlcDcExchangerSiemensTIA16AML](PlcDcExchangerSiemensTIA16AML.html)
+  - [PlcDcExchangerSiemensTIA17AML](PlcDcExchangerSiemensTIA17AML.html)
+  - [PlcDcExchangerSiemensTIA18AML](PlcDcExchangerSiemensTIA18AML.html)
+  - [PlcDcExchangerSiemensTIA19AML](PlcDcExchangerSiemensTIA19AML.html)
+  - [PlcDcExchangerSiemensTIA151AML](PlcDcExchangerSiemensTIA151AML.html)
+  - [PlcDcExchangerSiemensTSTAML](PlcDcExchangerSiemensTSTAML.html)
+  - [PlcDcXMLExchangerABB](PlcDcXMLExchangerABB.html)
+  - [PlcDcXMLExchangerBandR](PlcDcXMLExchangerBandR.html)
+  - [PlcDcXmlExchangerRexroth](PlcDcXmlExchangerRexroth.html)
+  - [PlcDCXmlExchangerSchneider](PlcDCXmlExchangerSchneider.html)
+  - [PlcDcXMLExchangerSiemens](PlcDcXMLExchangerSiemens.html)
+  - [PlcDcXMLExchangerUniversal](PlcDcXMLExchangerUniversal.html)
+- [XmlLblXmlExportConverterImpl](XmlLblXmlExportConverterImpl.html)

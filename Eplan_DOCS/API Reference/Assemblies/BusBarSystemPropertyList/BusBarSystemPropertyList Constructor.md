@@ -1,0 +1,12 @@
+# BusBarSystemPropertyList Constructor
+
+**Source URL:** https://www.eplan.help/en-us/Infoportal/Content/api/2026/Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.E3D.BusBarSystemPropertyList~_ctor.html
+
+---
+
+Overload List
+
+| Overload | Description |
+| --- | --- |
+| [BusBarSystemPropertyList Constructor(BusBarSystem)](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.E3D.BusBarSystemPropertyList~_ctor(BusBarSystem).html) | Should be used internal only |
+| [BusBarSystemPropertyList Constructor()](Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.E3D.BusBarSystemPropertyList~_ctor().html) | Constructor |

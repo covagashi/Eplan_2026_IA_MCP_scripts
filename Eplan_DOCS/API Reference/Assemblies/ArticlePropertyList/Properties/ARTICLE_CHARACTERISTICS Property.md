@@ -1,0 +1,34 @@
+# ARTICLE_CHARACTERISTICS Property
+
+**Source URL:** https://www.eplan.help/en-us/Infoportal/Content/api/2026/Eplan.EplApi.DataModelu~Eplan.EplApi.DataModel.ArticlePropertyList~ARTICLE_CHARACTERISTICS().html
+
+---
+
+Technical characteristics # 22017.
+
+Syntax
+
+**C#**
+
+
+
+public PropertyValue ARTICLE_CHARACTERISTICS {get; set;}
+
+public:
+
+property PropertyValue^ ARTICLE_CHARACTERISTICS {
+
+   PropertyValue^ get();
+
+   void set (    PropertyValue^ value);
+
+}
+
+
+#### Property Value
+
+Returns property value of type System.String.
+
+Remarks
+
+Property of a part variant.
