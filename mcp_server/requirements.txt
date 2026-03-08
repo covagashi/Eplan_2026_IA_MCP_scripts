@@ -5,3 +5,7 @@ mcp
 
 # .NET interop for EPLAN API
 pythonnet>=3.0.0
+
+# RAG - Documentation semantic search
+chromadb>=0.5.0
+sentence-transformers>=3.0.0

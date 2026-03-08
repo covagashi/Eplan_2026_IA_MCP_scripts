@@ -1328,6 +1328,79 @@ public class MCPTest
 
 
 # ============================================================================
+# DOCUMENTATION RAG (Semantic Search over Eplan_DOCS/)
+# ============================================================================
+
+from rag_engine import get_rag
+
+
+@mcp.tool()
+def eplan_docs_search(
+    query: str,
+    n_results: int = 5,
+    category: str = None
+) -> str:
+    """
+    Semantic search over EPLAN documentation (API Reference + User Guide).
+
+    Use this tool to find relevant documentation about EPLAN API classes,
+    methods, actions, events, properties, or how-to guides.
+
+    The first time you call this, it will automatically index all docs
+    (takes 2-5 minutes). Subsequent calls are instant.
+
+    Args:
+        query: Natural language query (e.g. "how to export PDF", "ProjectManager class methods")
+        n_results: Number of results to return (default 5, max 20)
+        category: Optional filter - "API Reference" or "User Guide"
+    """
+    try:
+        rag = get_rag()
+        results = rag.search(query, n_results=n_results, category=category)
+        return json.dumps(results, indent=2, ensure_ascii=False)
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+@mcp.tool()
+def eplan_docs_index(force: bool = False) -> str:
+    """
+    Index (or re-index) the EPLAN documentation for semantic search.
+
+    Scans all .md and .csv files in Eplan_DOCS/ and creates vector embeddings
+    using the all-mpnet-base-v2 model stored in a local ChromaDB.
+
+    This runs automatically on first search, but you can call it manually
+    to force a re-index after documentation changes.
+
+    Args:
+        force: If True, re-index even if no changes detected
+    """
+    try:
+        rag = get_rag()
+        result = rag.index_docs(force=force)
+        return json.dumps(result, indent=2, ensure_ascii=False)
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+@mcp.tool()
+def eplan_docs_stats() -> str:
+    """
+    Get statistics about the EPLAN documentation index.
+
+    Shows: number of indexed chunks, embedding model, last index time,
+    and whether a re-index is needed.
+    """
+    try:
+        rag = get_rag()
+        stats = rag.get_stats()
+        return json.dumps(stats, indent=2, ensure_ascii=False)
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+# ============================================================================
 # MAIN
 # ============================================================================
 
@@ -1356,6 +1429,7 @@ if __name__ == "__main__":
     print("  - PLC: export, import")
     print("  - Workspace: open, save, clean")
     print("  - Data exchange: connections, functions, pages")
+    print("  - Docs RAG: search, index, stats (semantic search)")
     print("  - And more...")
     print("-" * 40)
     mcp.run()
