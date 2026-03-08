@@ -44,5 +44,6 @@ Thumbs.db
 dist/
 build/
 *.egg-info/
+skills-lock.json
 
 .claude
