@@ -1,0 +1,3 @@
+## 2025-03-09 - [Pathlib vs OS.walk Overhead]
+**Learning:** `Path.rglob` can be significantly slower than `os.walk` when used multiple times to filter for different file extensions in a large directory tree, due to multiple traversals and `Path` object instantiation overhead for every file encountered.
+**Action:** When searching a directory for multiple file extensions, use a single pass (either a single `rglob("*")` filtering by suffix, or `os.walk` which is generally faster for raw string paths). If `os.walk` is used, convert back to `Path` objects only for the matched files if `pathlib` features are needed later.

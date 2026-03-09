@@ -99,10 +99,27 @@ class EplanRAG:
 
     def _compute_docs_fingerprint(self) -> str:
         """Hash of all doc file paths + modification times to detect changes."""
-        md_files = sorted(self.docs_dir.rglob("*.md"))
-        csv_files = sorted(self.docs_dir.rglob("*.csv"))
         hasher = hashlib.md5()
-        for f in md_files + csv_files:
+        docs_dir_str = str(self.docs_dir)
+
+        md_files = []
+        csv_files = []
+
+        # ⚡ Bolt Optimization: Replace double Path.rglob() passes with a single os.walk()
+        # This prevents traversing the entire documentation directory twice and avoids
+        # overhead from instantiating Path objects for every file.
+        for root, _, filenames in os.walk(docs_dir_str):
+            for name in filenames:
+                if name.endswith('.md'):
+                    md_files.append(os.path.join(root, name))
+                elif name.endswith('.csv'):
+                    csv_files.append(os.path.join(root, name))
+
+        # Sort to match original rglob sorting behavior
+        md_files_path = sorted([Path(f) for f in md_files])
+        csv_files_path = sorted([Path(f) for f in csv_files])
+
+        for f in md_files_path + csv_files_path:
             rel = str(f.relative_to(self.docs_dir))
             hasher.update(rel.encode("utf-8"))
             try:
