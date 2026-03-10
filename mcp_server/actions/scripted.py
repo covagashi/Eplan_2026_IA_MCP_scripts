@@ -11,18 +11,39 @@ import os
 import json
 import time
 import uuid
-from typing import Optional, List
+import re
+from typing import List
 from ._base import _get_connected_manager
 
 # Directory for generated scripts and results
-SCRIPT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "generated")
-RESULTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "results")
+SCRIPT_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "generated"
+)
+RESULTS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "results"
+)
 
 
 def _ensure_dirs():
     """Ensure script and results directories exist."""
     os.makedirs(SCRIPT_DIR, exist_ok=True)
     os.makedirs(RESULTS_DIR, exist_ok=True)
+
+
+def _escape_cs_string(s: str) -> str:
+    """Safely encode a string as a C# string literal."""
+    if not isinstance(s, str):
+        return (
+            "null" if s is None else str(s).lower() if isinstance(s, bool) else str(s)
+        )
+    return json.dumps(s)
+
+
+def _validate_cs_identifier(s: str) -> str:
+    """Validate that a string is a safe C# identifier."""
+    if not s or not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", s):
+        raise ValueError(f"Invalid identifier: {s}")
+    return s
 
 
 def _execute_script(script_content: str, timeout: float = 30.0) -> dict:
@@ -48,34 +69,49 @@ def _execute_script(script_content: str, timeout: float = 30.0) -> dict:
     result_path = os.path.join(RESULTS_DIR, f"result_{exec_id}.json")
 
     # Inject result path into script
-    script_with_path = script_content.replace("{{RESULT_PATH}}", result_path.replace("\\", "\\\\"))
+    script_with_path = script_content.replace(
+        "{{RESULT_PATH}}", result_path.replace("\\", "\\\\")
+    )
 
     try:
         # Write script
-        with open(script_path, 'w', encoding='utf-8') as f:
+        with open(script_path, "w", encoding="utf-8") as f:
             f.write(script_with_path)
 
         # Register and execute
-        reg_result = manager.execute_action(f'RegisterScript /ScriptFile:"{script_path}"')
+        reg_result = manager.execute_action(
+            f'RegisterScript /ScriptFile:"{script_path}"'
+        )
         if not reg_result.get("success"):
-            return {"success": False, "message": f"Failed to register script: {reg_result.get('message')}"}
+            return {
+                "success": False,
+                "message": f"Failed to register script: {reg_result.get('message')}",
+            }
 
-        exec_result = manager.execute_action(f'ExecuteScript /ScriptFile:"{script_path}"')
+        exec_result = manager.execute_action(
+            f'ExecuteScript /ScriptFile:"{script_path}"'
+        )
         if not exec_result.get("success"):
-            return {"success": False, "message": f"Failed to execute script: {exec_result.get('message')}"}
+            return {
+                "success": False,
+                "message": f"Failed to execute script: {exec_result.get('message')}",
+            }
 
         # Wait for results file
         start_time = time.time()
         while not os.path.exists(result_path):
             if time.time() - start_time > timeout:
-                return {"success": False, "message": "Timeout waiting for script results"}
+                return {
+                    "success": False,
+                    "message": "Timeout waiting for script results",
+                }
             time.sleep(0.1)
 
         # Small delay to ensure file is fully written
         time.sleep(0.1)
 
         # Read results
-        with open(result_path, 'r', encoding='utf-8') as f:
+        with open(result_path, "r", encoding="utf-8") as f:
             results = json.load(f)
 
         return {"success": True, "results": results}
@@ -101,11 +137,12 @@ def _execute_script(script_content: str, timeout: float = 30.0) -> dict:
 # PARTS DATABASE (MDPartsManagement)
 # =============================================================================
 
+
 def parts_db_query(
     filter_property: str = None,
     filter_value: str = None,
     return_properties: List[str] = None,
-    limit: int = 100
+    limit: int = 100,
 ) -> dict:
     """
     Query parts from the EPLAN parts database.
@@ -122,16 +159,25 @@ def parts_db_query(
         dict with parts list and count
     """
     if return_properties is None:
-        return_properties = ["PartNr", "Description1", "Manufacturer", "ProductGroup", "ProductSubGroup"]
+        return_properties = [
+            "PartNr",
+            "Description1",
+            "Manufacturer",
+            "ProductGroup",
+            "ProductSubGroup",
+        ]
 
+    for p in return_properties:
+        _validate_cs_identifier(p)
     props_array = ", ".join([f'"{p}"' for p in return_properties])
 
     filter_code = ""
     if filter_property and filter_value:
-        filter_code = f'''
-            .Where(p => p.{filter_property}?.ToString()?.Contains("{filter_value}") == true)'''
+        _validate_cs_identifier(filter_property)
+        filter_code = f"""
+            .Where(p => p.{filter_property}?.ToString()?.Contains({_escape_cs_string(filter_value)}) == true)"""
 
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -191,14 +237,11 @@ public class PartsQuery_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
-def parts_db_count(
-    filter_property: str = None,
-    filter_value: str = None
-) -> dict:
+def parts_db_count(filter_property: str = None, filter_value: str = None) -> dict:
     """
     Count parts in the EPLAN parts database.
 
@@ -211,9 +254,10 @@ def parts_db_count(
     """
     filter_code = ""
     if filter_property and filter_value:
-        filter_code = f'.Where(p => p.{filter_property}?.ToString()?.Contains("{filter_value}") == true)'
+        _validate_cs_identifier(filter_property)
+        filter_code = f".Where(p => p.{filter_property}?.ToString()?.Contains({_escape_cs_string(filter_value)}) == true)"
 
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -247,7 +291,7 @@ public class PartsCount_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
@@ -261,7 +305,7 @@ def parts_db_get_part(part_number: str) -> dict:
     Returns:
         dict with part details
     """
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -280,7 +324,7 @@ public class PartsGet_{uuid.uuid4().hex[:6]}
             var mdParts = new MDPartsManagement();
             using (var db = mdParts.OpenDatabase())
             {{
-                var part = db.Parts.FirstOrDefault(p => p.PartNr == "{part_number}");
+                var part = db.Parts.FirstOrDefault(p => p.PartNr == {_escape_cs_string(part_number)});
 
                 if (part != null)
                 {{
@@ -320,15 +364,11 @@ public class PartsGet_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
-def parts_db_update(
-    part_number: str,
-    property_name: str,
-    property_value: str
-) -> dict:
+def parts_db_update(part_number: str, property_name: str, property_value: str) -> dict:
     """
     Update a property on a part in the database.
 
@@ -340,7 +380,7 @@ def parts_db_update(
     Returns:
         dict with success status
     """
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -359,14 +399,14 @@ public class PartsUpdate_{uuid.uuid4().hex[:6]}
             var mdParts = new MDPartsManagement();
             using (var db = mdParts.OpenDatabase())
             {{
-                var part = db.Parts.FirstOrDefault(p => p.PartNr == "{part_number}");
+                var part = db.Parts.FirstOrDefault(p => p.PartNr == {_escape_cs_string(part_number)});
 
                 if (part != null)
                 {{
-                    var prop = part.Properties.GetType().GetProperty("{property_name}");
+                    var prop = part.Properties.GetType().GetProperty({_escape_cs_string(property_name)});
                     if (prop != null)
                     {{
-                        prop.SetValue(part.Properties, "{property_value}");
+                        prop.SetValue(part.Properties, {_escape_cs_string(property_value)});
                         results["success"] = true;
                         results["updated"] = true;
                     }}
@@ -393,7 +433,7 @@ public class PartsUpdate_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
@@ -404,7 +444,7 @@ def parts_db_list_product_groups() -> dict:
     Returns:
         dict with product groups
     """
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -439,13 +479,14 @@ public class PartsGroups_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
 # =============================================================================
 # SETTINGS API (Direct typed access)
 # =============================================================================
+
 
 def settings_get_string(setting_path: str, index: int = 0) -> dict:
     """
@@ -458,7 +499,7 @@ def settings_get_string(setting_path: str, index: int = 0) -> dict:
     Returns:
         dict with setting value
     """
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Collections.Generic;
 using Eplan.EplApi.Base;
@@ -474,7 +515,7 @@ public class SettingsGetStr_{uuid.uuid4().hex[:6]}
         try
         {{
             var settings = new Settings();
-            string value = settings.GetStringSetting("{setting_path}", {index});
+            string value = settings.GetStringSetting({_escape_cs_string(setting_path)}, {index});
             results["success"] = true;
             results["value"] = value;
             results["type"] = "string";
@@ -489,7 +530,7 @@ public class SettingsGetStr_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
@@ -505,7 +546,7 @@ def settings_set_string(setting_path: str, value: str, index: int = 0) -> dict:
     Returns:
         dict with success status
     """
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Collections.Generic;
 using Eplan.EplApi.Base;
@@ -521,7 +562,7 @@ public class SettingsSetStr_{uuid.uuid4().hex[:6]}
         try
         {{
             var settings = new Settings();
-            settings.SetStringSetting("{setting_path}", "{value}", {index});
+            settings.SetStringSetting({_escape_cs_string(setting_path)}, {_escape_cs_string(value)}, {index});
             results["success"] = true;
         }}
         catch (Exception ex)
@@ -534,7 +575,7 @@ public class SettingsSetStr_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
@@ -549,7 +590,7 @@ def settings_get_bool(setting_path: str, index: int = 0) -> dict:
     Returns:
         dict with setting value
     """
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Collections.Generic;
 using Eplan.EplApi.Base;
@@ -565,7 +606,7 @@ public class SettingsGetBool_{uuid.uuid4().hex[:6]}
         try
         {{
             var settings = new Settings();
-            bool value = settings.GetBoolSetting("{setting_path}", {index});
+            bool value = settings.GetBoolSetting({_escape_cs_string(setting_path)}, {index});
             results["success"] = true;
             results["value"] = value;
             results["type"] = "bool";
@@ -580,7 +621,7 @@ public class SettingsGetBool_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
@@ -597,7 +638,7 @@ def settings_set_bool(setting_path: str, value: bool, index: int = 0) -> dict:
         dict with success status
     """
     value_str = "true" if value else "false"
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Collections.Generic;
 using Eplan.EplApi.Base;
@@ -613,7 +654,7 @@ public class SettingsSetBool_{uuid.uuid4().hex[:6]}
         try
         {{
             var settings = new Settings();
-            settings.SetBoolSetting("{setting_path}", {value_str}, {index});
+            settings.SetBoolSetting({_escape_cs_string(setting_path)}, {value_str}, {index});
             results["success"] = true;
         }}
         catch (Exception ex)
@@ -626,7 +667,7 @@ public class SettingsSetBool_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
@@ -641,7 +682,7 @@ def settings_get_int(setting_path: str, index: int = 0) -> dict:
     Returns:
         dict with setting value
     """
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Collections.Generic;
 using Eplan.EplApi.Base;
@@ -657,7 +698,7 @@ public class SettingsGetInt_{uuid.uuid4().hex[:6]}
         try
         {{
             var settings = new Settings();
-            int value = settings.GetNumericSetting("{setting_path}", {index});
+            int value = settings.GetNumericSetting({_escape_cs_string(setting_path)}, {index});
             results["success"] = true;
             results["value"] = value;
             results["type"] = "int";
@@ -672,7 +713,7 @@ public class SettingsGetInt_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
@@ -688,7 +729,7 @@ def settings_set_int(setting_path: str, value: int, index: int = 0) -> dict:
     Returns:
         dict with success status
     """
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Collections.Generic;
 using Eplan.EplApi.Base;
@@ -704,7 +745,7 @@ public class SettingsSetInt_{uuid.uuid4().hex[:6]}
         try
         {{
             var settings = new Settings();
-            settings.SetNumericSetting("{setting_path}", {value}, {index});
+            settings.SetNumericSetting({_escape_cs_string(setting_path)}, {value}, {index});
             results["success"] = true;
         }}
         catch (Exception ex)
@@ -717,7 +758,7 @@ public class SettingsSetInt_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
@@ -732,7 +773,7 @@ def settings_get_double(setting_path: str, index: int = 0) -> dict:
     Returns:
         dict with setting value
     """
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Collections.Generic;
 using Eplan.EplApi.Base;
@@ -748,7 +789,7 @@ public class SettingsGetDbl_{uuid.uuid4().hex[:6]}
         try
         {{
             var settings = new Settings();
-            double value = settings.GetDoubleSetting("{setting_path}", {index});
+            double value = settings.GetDoubleSetting({_escape_cs_string(setting_path)}, {index});
             results["success"] = true;
             results["value"] = value;
             results["type"] = "double";
@@ -763,7 +804,7 @@ public class SettingsGetDbl_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
@@ -779,7 +820,7 @@ def settings_set_double(setting_path: str, value: float, index: int = 0) -> dict
     Returns:
         dict with success status
     """
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Collections.Generic;
 using Eplan.EplApi.Base;
@@ -795,7 +836,7 @@ public class SettingsSetDbl_{uuid.uuid4().hex[:6]}
         try
         {{
             var settings = new Settings();
-            settings.SetDoubleSetting("{setting_path}", {value}, {index});
+            settings.SetDoubleSetting({_escape_cs_string(setting_path)}, {value}, {index});
             results["success"] = true;
         }}
         catch (Exception ex)
@@ -808,13 +849,14 @@ public class SettingsSetDbl_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
 # =============================================================================
 # PATH MAP (Variable substitution)
 # =============================================================================
+
 
 def pathmap_substitute(path_with_variables: str) -> dict:
     """
@@ -834,10 +876,10 @@ def pathmap_substitute(path_with_variables: str) -> dict:
     Returns:
         dict with substituted path
     """
-    # Escape the path for C# string
-    escaped_path = path_with_variables.replace("\\", "\\\\")
+    # Escape the path for C# string to prevent code injection
+    escaped_path = _escape_cs_string(path_with_variables)
 
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Collections.Generic;
 using Eplan.EplApi.Base;
@@ -852,9 +894,9 @@ public class PathMap_{uuid.uuid4().hex[:6]}
 
         try
         {{
-            string substituted = PathMap.SubstitutePath(@"{escaped_path}");
+            string substituted = PathMap.SubstitutePath({escaped_path});
             results["success"] = true;
-            results["original"] = @"{escaped_path}";
+            results["original"] = {escaped_path};
             results["substituted"] = substituted;
         }}
         catch (Exception ex)
@@ -867,7 +909,7 @@ public class PathMap_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
@@ -878,7 +920,7 @@ def pathmap_get_common_paths() -> dict:
     Returns:
         dict with path variables and values
     """
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Collections.Generic;
 using Eplan.EplApi.Base;
@@ -935,13 +977,14 @@ public class PathMapAll_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
 # =============================================================================
 # CUSTOM SCRIPT EXECUTION
 # =============================================================================
+
 
 def execute_custom_script(script_code: str) -> dict:
     """
