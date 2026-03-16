@@ -28,10 +28,10 @@ from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunct
 
 EMBEDDING_MODEL = "BAAI/bge-base-en-v1.5"
 COLLECTION_NAME = "eplan_docs"
-CHUNK_SIZE = 1500       # max characters per chunk
-CHUNK_OVERLAP = 200     # overlap between chunks
+CHUNK_SIZE = 1500  # max characters per chunk
+CHUNK_OVERLAP = 200  # overlap between chunks
 MAX_RESULTS = 10
-BATCH_SIZE = 256        # ChromaDB insert batch size
+BATCH_SIZE = 256  # ChromaDB insert batch size
 
 # Paths (relative to this file)
 SCRIPT_DIR = Path(__file__).parent
@@ -48,10 +48,11 @@ PRECOMPUTED_DB_URL = "https://github.com/covagashi/Eplan_2026_IA_MCP_scripts/rel
 # RAG ENGINE
 # =============================================================================
 
+
 class EplanRAG:
     """
     RAG engine for EPLAN documentation.
-    
+
     - Indexes all .md and .csv files from Eplan_DOCS/
     - Splits large documents into overlapping chunks
     - Stores embeddings in a persistent ChromaDB collection
@@ -65,9 +66,12 @@ class EplanRAG:
         self.db_dir.mkdir(parents=True, exist_ok=True)
 
         print(f"Loading embedding model '{EMBEDDING_MODEL}'...", flush=True)
-        print("(This may take a few minutes if downloading for the first time)", flush=True)
+        print(
+            "(This may take a few minutes if downloading for the first time)",
+            flush=True,
+        )
         # BGE requires "Represent this sentence for searching relevant passages: " for queries ONLY.
-        # However, Chroma's SentenceTransformerEmbeddingFunction doesn't naturally support diff 
+        # However, Chroma's SentenceTransformerEmbeddingFunction doesn't naturally support diff
         # prefixes for encode vs query. We'll handle the query prefix in the search() method.
         self._embedding_fn = SentenceTransformerEmbeddingFunction(
             model_name=EMBEDDING_MODEL
@@ -94,32 +98,46 @@ class EplanRAG:
         return self._collection
 
     # -------------------------------------------------------------------------
+    # File discovery
+    # -------------------------------------------------------------------------
+
+    def _get_all_files(self) -> List[Path]:
+        """
+        Find all .md and .csv files in self.docs_dir using a single pass.
+        Returns a sorted list of Path objects (matching original rglob sorting).
+        """
+        md_files = []
+        csv_files = []
+
+        def _walk(path):
+            try:
+                with os.scandir(path) as it:
+                    for entry in it:
+                        if entry.is_dir(follow_symlinks=False):
+                            _walk(entry.path)
+                        elif entry.is_file(follow_symlinks=False):
+                            if entry.name.endswith(".md"):
+                                md_files.append(Path(entry.path))
+                            elif entry.name.endswith(".csv"):
+                                csv_files.append(Path(entry.path))
+            except PermissionError:
+                pass
+
+        _walk(str(self.docs_dir))
+        return sorted(md_files) + sorted(csv_files)
+
+    # -------------------------------------------------------------------------
     # Change detection
     # -------------------------------------------------------------------------
 
     def _compute_docs_fingerprint(self) -> str:
         """Hash of all doc file paths + modification times to detect changes."""
         hasher = hashlib.md5()
-        docs_dir_str = str(self.docs_dir)
 
-        md_files = []
-        csv_files = []
+        # ⚡ Bolt Optimization: Use unified single-pass file discovery
+        all_files = self._get_all_files()
 
-        # ⚡ Bolt Optimization: Replace double Path.rglob() passes with a single os.walk()
-        # This prevents traversing the entire documentation directory twice and avoids
-        # overhead from instantiating Path objects for every file.
-        for root, _, filenames in os.walk(docs_dir_str):
-            for name in filenames:
-                if name.endswith('.md'):
-                    md_files.append(os.path.join(root, name))
-                elif name.endswith('.csv'):
-                    csv_files.append(os.path.join(root, name))
-
-        # Sort to match original rglob sorting behavior
-        md_files_path = sorted([Path(f) for f in md_files])
-        csv_files_path = sorted([Path(f) for f in csv_files])
-
-        for f in md_files_path + csv_files_path:
+        for f in all_files:
             rel = str(f.relative_to(self.docs_dir))
             hasher.update(rel.encode("utf-8"))
             try:
@@ -148,21 +166,29 @@ class EplanRAG:
         """Download pre-computed ChromaDB zip if available to save indexing time."""
         if not PRECOMPUTED_DB_URL or PRECOMPUTED_DB_URL.startswith("TODO"):
             return False
-            
-        print(f"\n[RAG] Missing vector database. Trying to download pre-computed DB to save 3 hours of indexing...", flush=True)
+
+        print(
+            "\n[RAG] Missing vector database. Trying to download pre-computed DB to save 3 hours of indexing...",
+            flush=True,
+        )
         print(f"[RAG] URL: {PRECOMPUTED_DB_URL}", flush=True)
-        
+
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
                 zip_path = Path(temp_dir) / "chroma_db.zip"
-                
+
                 # Download with basic progress
-                req = urllib.request.Request(PRECOMPUTED_DB_URL, headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req) as response, open(zip_path, 'wb') as out_file:
-                    total_size = int(response.info().get('Content-Length', 0))
+                req = urllib.request.Request(
+                    PRECOMPUTED_DB_URL, headers={"User-Agent": "Mozilla/5.0"}
+                )
+                with (
+                    urllib.request.urlopen(req) as response,
+                    open(zip_path, "wb") as out_file,
+                ):
+                    total_size = int(response.info().get("Content-Length", 0))
                     downloaded = 0
-                    block_size = 1024 * 1024 * 5 # 5MB chunks
-                    
+                    block_size = 1024 * 1024 * 5  # 5MB chunks
+
                     while True:
                         buffer = response.read(block_size)
                         if not buffer:
@@ -170,32 +196,41 @@ class EplanRAG:
                         downloaded += len(buffer)
                         out_file.write(buffer)
                         if total_size > 0:
-                            print(f"[RAG] Downloaded {downloaded / (1024*1024):.1f} MB / {total_size / (1024*1024):.1f} MB...", end='\r', flush=True)
-                
+                            print(
+                                f"[RAG] Downloaded {downloaded / (1024 * 1024):.1f} MB / {total_size / (1024 * 1024):.1f} MB...",
+                                end="\r",
+                                flush=True,
+                            )
+
                 print("\n[RAG] Download complete. Extracting...", flush=True)
-                
+
                 # Ensure target directory is clean before extraction
                 if self.db_dir.exists():
                     import shutil
+
                     shutil.rmtree(self.db_dir)
                 self.db_dir.mkdir(parents=True, exist_ok=True)
-                
-                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+
+                with zipfile.ZipFile(zip_path, "r") as zip_ref:
                     # Extract contents directly into self.db_dir
                     # Assuming the zip contains the *contents* of chroma_db, not the folder itself
                     zip_ref.extractall(self.db_dir)
-                    
-                print("[RAG] Pre-computed vector database installed successfully!", flush=True)
-                
+
+                print(
+                    "[RAG] Pre-computed vector database installed successfully!",
+                    flush=True,
+                )
+
                 # Check for nested chroma_db structure and move files up if needed
                 nested_dir = self.db_dir / "chroma_db"
                 if nested_dir.exists() and nested_dir.is_dir():
                     import shutil
+
                     for item in nested_dir.iterdir():
                         shutil.move(str(item), str(self.db_dir))
                     nested_dir.rmdir()
                 return True
-                
+
         except Exception as e:
             print(f"\n[RAG] Failed to download pre-computed DB: {e}", flush=True)
             print("[RAG] Will fall back to local indexing.", flush=True)
@@ -259,7 +294,7 @@ class EplanRAG:
     def _chunk_text(self, text: str) -> List[str]:
         """
         Split text into overlapping chunks.
-        
+
         Strategy:
         1. If text fits in one chunk, return as-is
         2. Try splitting by markdown headers
@@ -333,10 +368,10 @@ class EplanRAG:
     def index_docs(self, force: bool = False) -> Dict:
         """
         Index all documentation files.
-        
+
         Args:
             force: Re-index even if docs haven't changed
-            
+
         Returns:
             Dict with indexing stats
         """
@@ -368,11 +403,13 @@ class EplanRAG:
         self._collection = None  # Reset cached reference
 
         # Gather all files
-        print(f"Scanning directory {self.docs_dir} for markdown and CSV files...", flush=True)
-        md_files = sorted(self.docs_dir.rglob("*.md"))
-        csv_files = sorted(self.docs_dir.rglob("*.csv"))
-        all_files = md_files + csv_files
-        
+        print(
+            f"Scanning directory {self.docs_dir} for markdown and CSV files...",
+            flush=True,
+        )
+        # ⚡ Bolt Optimization: Use unified single-pass file discovery
+        all_files = self._get_all_files()
+
         total_files = len(all_files)
         print(f"Found {total_files} files to index.", flush=True)
 
@@ -381,7 +418,7 @@ class EplanRAG:
         all_metas = []
         files_ok = 0
         files_skipped = 0
-        
+
         print("Parsing files and chunking text...", flush=True)
 
         for filepath in all_files:
@@ -400,33 +437,47 @@ class EplanRAG:
 
                 all_ids.append(chunk_id)
                 all_docs.append(chunk)
-                all_metas.append({
-                    "title": doc_info["title"],
-                    "source": doc_info["rel_path"],
-                    "source_url": doc_info["source_url"],
-                    "category": doc_info["category"],
-                    "subcategory": doc_info["subcategory"],
-                    "chunk_index": i,
-                    "total_chunks": len(chunks),
-                })
+                all_metas.append(
+                    {
+                        "title": doc_info["title"],
+                        "source": doc_info["rel_path"],
+                        "source_url": doc_info["source_url"],
+                        "category": doc_info["category"],
+                        "subcategory": doc_info["subcategory"],
+                        "chunk_index": i,
+                        "total_chunks": len(chunks),
+                    }
+                )
 
             if files_ok % 1000 == 0:
-                print(f"  Processed {files_ok}/{total_files} files... ({len(all_ids)} chunks generated)", flush=True)
+                print(
+                    f"  Processed {files_ok}/{total_files} files... ({len(all_ids)} chunks generated)",
+                    flush=True,
+                )
 
-        print(f"Done parsing. Generated {len(all_ids)} chunks from {files_ok} files.", flush=True)
-        print("Inserting into ChromaDB vector store (this will take a while)...", flush=True)
+        print(
+            f"Done parsing. Generated {len(all_ids)} chunks from {files_ok} files.",
+            flush=True,
+        )
+        print(
+            "Inserting into ChromaDB vector store (this will take a while)...",
+            flush=True,
+        )
 
         # Batch insert into ChromaDB
         for i in range(0, len(all_ids), BATCH_SIZE):
             end = min(i + BATCH_SIZE, len(all_ids))
             if (i // BATCH_SIZE) % 10 == 0:
-                print(f"  Inserting batch {i // BATCH_SIZE + 1} ... (chunks {i} to {end})", flush=True)
+                print(
+                    f"  Inserting batch {i // BATCH_SIZE + 1} ... (chunks {i} to {end})",
+                    flush=True,
+                )
             self.collection.add(
                 ids=all_ids[i:end],
                 documents=all_docs[i:end],
                 metadatas=all_metas[i:end],
             )
-        
+
         print("Indexing complete!", flush=True)
 
         elapsed = round(time.time() - start_time, 1)
@@ -457,12 +508,12 @@ class EplanRAG:
     ) -> List[Dict]:
         """
         Semantic search over indexed documentation.
-        
+
         Args:
             query: Natural language search query
             n_results: Number of results (max 20)
             category: Filter by category (e.g. "API Reference", "User Guide")
-            
+
         Returns:
             List of result dicts with content, metadata, and relevance score
         """
@@ -470,10 +521,12 @@ class EplanRAG:
         if self.collection.count() == 0:
             idx = self.index_docs()
             if self.collection.count() == 0:
-                return [{
-                    "error": "No documents indexed. Check that Eplan_DOCS/ exists.",
-                    "index_result": idx,
-                }]
+                return [
+                    {
+                        "error": "No documents indexed. Check that Eplan_DOCS/ exists.",
+                        "index_result": idx,
+                    }
+                ]
 
         # Build filter
         where_filter = None
@@ -482,7 +535,7 @@ class EplanRAG:
 
         # BGE model explicitly requires this prefix for queries to get optimal semantic matching
         bge_query = f"Represent this sentence for searching relevant passages: {query}"
-        
+
         results = self.collection.query(
             query_texts=[bge_query],
             n_results=min(n_results, 20),
@@ -496,15 +549,17 @@ class EplanRAG:
                 meta = results["metadatas"][0][i]
                 distance = results["distances"][0][i]
 
-                output.append({
-                    "title": meta.get("title", ""),
-                    "source": meta.get("source", ""),
-                    "source_url": meta.get("source_url", ""),
-                    "category": meta.get("category", ""),
-                    "chunk": f"{meta.get('chunk_index', 0)+1}/{meta.get('total_chunks', 1)}",
-                    "relevance": round(1 - distance, 4),
-                    "content": results["documents"][0][i],
-                })
+                output.append(
+                    {
+                        "title": meta.get("title", ""),
+                        "source": meta.get("source", ""),
+                        "source_url": meta.get("source_url", ""),
+                        "category": meta.get("category", ""),
+                        "chunk": f"{meta.get('chunk_index', 0) + 1}/{meta.get('total_chunks', 1)}",
+                        "relevance": round(1 - distance, 4),
+                        "content": results["documents"][0][i],
+                    }
+                )
 
         return output
 
