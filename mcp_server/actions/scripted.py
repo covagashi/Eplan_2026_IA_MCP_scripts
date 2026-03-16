@@ -11,12 +11,16 @@ import os
 import json
 import time
 import uuid
-from typing import Optional, List
+from typing import List
 from ._base import _get_connected_manager
 
 # Directory for generated scripts and results
-SCRIPT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "generated")
-RESULTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "results")
+SCRIPT_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "generated"
+)
+RESULTS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "results"
+)
 
 
 def _ensure_dirs():
@@ -48,34 +52,49 @@ def _execute_script(script_content: str, timeout: float = 30.0) -> dict:
     result_path = os.path.join(RESULTS_DIR, f"result_{exec_id}.json")
 
     # Inject result path into script
-    script_with_path = script_content.replace("{{RESULT_PATH}}", result_path.replace("\\", "\\\\"))
+    script_with_path = script_content.replace(
+        "{{RESULT_PATH}}", result_path.replace("\\", "\\\\")
+    )
 
     try:
         # Write script
-        with open(script_path, 'w', encoding='utf-8') as f:
+        with open(script_path, "w", encoding="utf-8") as f:
             f.write(script_with_path)
 
         # Register and execute
-        reg_result = manager.execute_action(f'RegisterScript /ScriptFile:"{script_path}"')
+        reg_result = manager.execute_action(
+            f'RegisterScript /ScriptFile:"{script_path}"'
+        )
         if not reg_result.get("success"):
-            return {"success": False, "message": f"Failed to register script: {reg_result.get('message')}"}
+            return {
+                "success": False,
+                "message": f"Failed to register script: {reg_result.get('message')}",
+            }
 
-        exec_result = manager.execute_action(f'ExecuteScript /ScriptFile:"{script_path}"')
+        exec_result = manager.execute_action(
+            f'ExecuteScript /ScriptFile:"{script_path}"'
+        )
         if not exec_result.get("success"):
-            return {"success": False, "message": f"Failed to execute script: {exec_result.get('message')}"}
+            return {
+                "success": False,
+                "message": f"Failed to execute script: {exec_result.get('message')}",
+            }
 
         # Wait for results file
         start_time = time.time()
         while not os.path.exists(result_path):
             if time.time() - start_time > timeout:
-                return {"success": False, "message": "Timeout waiting for script results"}
+                return {
+                    "success": False,
+                    "message": "Timeout waiting for script results",
+                }
             time.sleep(0.1)
 
         # Small delay to ensure file is fully written
         time.sleep(0.1)
 
         # Read results
-        with open(result_path, 'r', encoding='utf-8') as f:
+        with open(result_path, "r", encoding="utf-8") as f:
             results = json.load(f)
 
         return {"success": True, "results": results}
@@ -86,14 +105,14 @@ def _execute_script(script_content: str, timeout: float = 30.0) -> dict:
         # Cleanup
         try:
             manager.execute_action(f'UnregisterScript /ScriptFile:"{script_path}"')
-        except:
+        except OSError:
             pass
         try:
             if os.path.exists(script_path):
                 os.remove(script_path)
             if os.path.exists(result_path):
                 os.remove(result_path)
-        except:
+        except OSError:
             pass
 
 
@@ -101,11 +120,12 @@ def _execute_script(script_content: str, timeout: float = 30.0) -> dict:
 # PARTS DATABASE (MDPartsManagement)
 # =============================================================================
 
+
 def parts_db_query(
     filter_property: str = None,
     filter_value: str = None,
     return_properties: List[str] = None,
-    limit: int = 100
+    limit: int = 100,
 ) -> dict:
     """
     Query parts from the EPLAN parts database.
@@ -122,7 +142,13 @@ def parts_db_query(
         dict with parts list and count
     """
     if return_properties is None:
-        return_properties = ["PartNr", "Description1", "Manufacturer", "ProductGroup", "ProductSubGroup"]
+        return_properties = [
+            "PartNr",
+            "Description1",
+            "Manufacturer",
+            "ProductGroup",
+            "ProductSubGroup",
+        ]
 
     props_array = ", ".join([f'"{p}"' for p in return_properties])
 
@@ -131,7 +157,7 @@ def parts_db_query(
         filter_code = f'''
             .Where(p => p.{filter_property}?.ToString()?.Contains("{filter_value}") == true)'''
 
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -191,14 +217,11 @@ public class PartsQuery_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
-def parts_db_count(
-    filter_property: str = None,
-    filter_value: str = None
-) -> dict:
+def parts_db_count(filter_property: str = None, filter_value: str = None) -> dict:
     """
     Count parts in the EPLAN parts database.
 
@@ -213,7 +236,7 @@ def parts_db_count(
     if filter_property and filter_value:
         filter_code = f'.Where(p => p.{filter_property}?.ToString()?.Contains("{filter_value}") == true)'
 
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -247,7 +270,7 @@ public class PartsCount_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
@@ -324,11 +347,7 @@ public class PartsGet_{uuid.uuid4().hex[:6]}
     return _execute_script(script)
 
 
-def parts_db_update(
-    part_number: str,
-    property_name: str,
-    property_value: str
-) -> dict:
+def parts_db_update(part_number: str, property_name: str, property_value: str) -> dict:
     """
     Update a property on a part in the database.
 
@@ -404,7 +423,7 @@ def parts_db_list_product_groups() -> dict:
     Returns:
         dict with product groups
     """
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -439,13 +458,14 @@ public class PartsGroups_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
 # =============================================================================
 # SETTINGS API (Direct typed access)
 # =============================================================================
+
 
 def settings_get_string(setting_path: str, index: int = 0) -> dict:
     """
@@ -816,6 +836,7 @@ public class SettingsSetDbl_{uuid.uuid4().hex[:6]}
 # PATH MAP (Variable substitution)
 # =============================================================================
 
+
 def pathmap_substitute(path_with_variables: str) -> dict:
     """
     Substitute EPLAN path variables in a string.
@@ -878,7 +899,7 @@ def pathmap_get_common_paths() -> dict:
     Returns:
         dict with path variables and values
     """
-    script = f'''using System;
+    script = f"""using System;
 using System.IO;
 using System.Collections.Generic;
 using Eplan.EplApi.Base;
@@ -935,13 +956,14 @@ public class PathMapAll_{uuid.uuid4().hex[:6]}
         File.WriteAllText(@"{{{{RESULT_PATH}}}}", json);
     }}
 }}
-'''
+"""
     return _execute_script(script)
 
 
 # =============================================================================
 # CUSTOM SCRIPT EXECUTION
 # =============================================================================
+
 
 def execute_custom_script(script_code: str) -> dict:
     """
