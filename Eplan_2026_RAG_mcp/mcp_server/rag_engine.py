@@ -213,7 +213,7 @@ class EplanRAG:
         # Enhance nodes for Hybrid search
         for i, node in enumerate(final_nodes):
             h_path = [node.metadata.get(f"Header_{j}") for j in range(1, 4) if node.metadata.get(f"Header_{j}")]
-            header_str = " > ".join(h_path) if h_path else node.metadata.title
+            header_str = " > ".join(h_path) if h_path else node.metadata.get("title", "")
             node.metadata["header_path"] = header_str
             node.metadata["chunk_index"] = i
 
