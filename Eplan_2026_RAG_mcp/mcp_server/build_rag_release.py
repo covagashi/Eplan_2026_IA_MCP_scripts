@@ -7,9 +7,9 @@ Usage:
 This script will:
   1. Remove any existing local chromadb
   2. Index all markdown and CSV files using BAAI/bge-base-en-v1.5
-  3. Compress the resulting DB into chroma_db_bge.zip inside the mcp_server dir.
+  3. Compress the resulting DB into chroma_db_sota.zip inside the mcp_server dir.
   
-Once finished, you should upload 'chroma_db_bge.zip' to your GitHub 
+Once finished, you should upload 'chroma_db_sota.zip' to your GitHub 
 repository's Releases section so users can auto-download it!
 """
 
@@ -45,7 +45,7 @@ def build_index():
 
 def create_zip_release():
     print("\n--- Phase 2: Creating Release Archive (.zip) ---")
-    output_zip = Path(__file__).parent / "chroma_db_bge.zip"
+    output_zip = Path(__file__).parent / "chroma_db_sota.zip"
     
     if output_zip.exists():
         output_zip.unlink()
