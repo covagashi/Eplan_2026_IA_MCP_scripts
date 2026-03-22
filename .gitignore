@@ -24,6 +24,8 @@ tmp/
 chromadb/
 .chromadb/
 chroma_db/
+chroma_db_sota/
+rag_db_llama_chroma/
 *.db
 *.sqlite3
 cache/
