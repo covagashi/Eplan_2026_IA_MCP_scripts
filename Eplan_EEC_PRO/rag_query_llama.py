@@ -1,11 +1,15 @@
 """
-EPLAN EEC Pro RAG Query - LlamaIndex Version
+EPLAN EEC Pro RAG Query - Modern 2026 LlamaIndex Pipeline
 """
 import sys
 import json
 import argparse
 import re
 from pathlib import Path
+import warnings
+
+# Suppress heavy HF/Torch warnings during CLI use
+warnings.filterwarnings("ignore")
 
 from llama_index.core import VectorStoreIndex, StorageContext, Settings, load_index_from_storage
 from llama_index.core.retrievers import QueryFusionRetriever
@@ -61,8 +65,9 @@ def get_reranker():
     if _reranker is None:
         try:
             from sentence_transformers import CrossEncoder
-            _reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
-            print("  [Reranker loaded: cross-encoder/ms-marco-MiniLM-L-6-v2]")
+            # UPGRADED TO BGE-RERANKER-BASE in 2026 pipeline for vastly superior MRR/NDCG
+            _reranker = CrossEncoder("BAAI/bge-reranker-base")
+            print("  [Reranker loaded: BAAI/bge-reranker-base (SOTA)]")
         except Exception as e:
             print(f"  [Reranker not available: {e}]")
             _reranker = False
@@ -73,7 +78,7 @@ def rerank(query: str, candidates: list[dict], top_k: int) -> list[dict]:
     if not reranker or not candidates:
         return candidates[:top_k]
 
-    pairs = [(query, c["content"][:512]) for c in candidates]
+    pairs = [(query, c["content"][:1024]) for c in candidates]
     scores = reranker.predict(pairs)
 
     for i, c in enumerate(candidates):
@@ -101,7 +106,7 @@ def query_rag(question: str, top_k: int = 5, category: str = None,
             Settings.llm = Ollama(model=llm_model, request_timeout=120.0)
             print(f"  [LLM Enabled: Ollama model '{llm_model}']")
         except ImportError:
-            print("  [Failed to load Ollama, using Mock LLM. Did you run pip install llama-index-llms-ollama?]")
+            print("  [Failed to load Ollama, using Mock LLM]")
             Settings.llm = None
     else:
         Settings.llm = None
@@ -110,14 +115,18 @@ def query_rag(question: str, top_k: int = 5, category: str = None,
     chroma_collection = db.get_or_create_collection("eplan_docs")
     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
     
+    # Storage context handles loading the metadata and BM25 docs natively
     storage_context = StorageContext.from_defaults(persist_dir=str(DB_DIR), vector_store=vector_store)
     index = load_index_from_storage(storage_context)
     
     vector_retriever = index.as_retriever(similarity_top_k=top_k * 4)
     
     nodes = list(storage_context.docstore.docs.values())
-    bm25_retriever = BM25Retriever.from_defaults(nodes=nodes, similarity_top_k=top_k * 4)
+    if not nodes:
+        print("  [Warning: No docstore nodes found for BM25. Ensure you ran the indexer first.]")
+    bm25_retriever = BM25Retriever.from_defaults(nodes=nodes, similarity_top_k=top_k * 4) if nodes else vector_retriever
     
+    # Multimodal Reciprocal Rank Fusion mapping
     retriever = QueryFusionRetriever(
         [vector_retriever, bm25_retriever],
         similarity_top_k=top_k * 4,
@@ -137,17 +146,24 @@ def query_rag(question: str, top_k: int = 5, category: str = None,
     candidates = []
     for n in nodes_with_scores:
         meta = n.node.metadata
+        # Dynamically calculate header path if available from MarkdownNodeParser
+        header_path = meta.get("header_path", "")
+        if not header_path:
+            h1 = meta.get("Header_1")
+            h2 = meta.get("Header_2")
+            h3 = meta.get("Header_3")
+            header_path = " > ".join(filter(None, [h1, h2, h3]))
+
         r = {
             "id": n.node.id_,
             "distance": n.score,
-            "title": meta.get("title", ""),
+            "title": meta.get("title", "Untitled"),
             "source": meta.get("source", ""),
             "category": meta.get("category", ""),
             "file": meta.get("file", ""),
-            "header_path": meta.get("header_path", ""),
+            "header_path": header_path,
             "parent_id": meta.get("parent_id", ""),
-            "chunk_index": meta.get("chunk_index", 0),
-            "content": n.node.get_content(),
+            "content": n.node.get_content()
         }
         candidates.append(r)
         
@@ -166,7 +182,6 @@ def query_rag(question: str, top_k: int = 5, category: str = None,
                 
     generated_answer = None
     if chat_with_llm and Settings.llm:
-        # Create a custom prompt for EPLAN
         qa_prompt_tmpl_str = (
             "You are an expert technical assistant for EPLAN EEC Pro.\n"
             "Use ONLY the provided context information below to answer the user's question.\n"
@@ -179,7 +194,6 @@ def query_rag(question: str, top_k: int = 5, category: str = None,
         )
         qa_prompt_tmpl = PromptTemplate(qa_prompt_tmpl_str)
         
-        # Build a QueryEngine that uses our Retriever
         query_engine = RetrieverQueryEngine.from_args(
             retriever=retriever,
             text_qa_template=qa_prompt_tmpl
@@ -191,7 +205,7 @@ def query_rag(question: str, top_k: int = 5, category: str = None,
     return candidates, generated_answer
 
 def main():
-    parser = argparse.ArgumentParser(description="EPLAN EEC Pro RAG Query (LlamaIndex)")
+    parser = argparse.ArgumentParser(description="EPLAN EEC Pro RAG Query (SOTA LlamaIndex)")
     parser.add_argument("question", help="Your question")
     parser.add_argument("--top", type=int, default=5, help="Number of results (default: 5)")
     parser.add_argument("--category", type=str, default=None, help="Filter by category")
@@ -212,7 +226,7 @@ def main():
 
     if args.json:
         for r in results:
-            r.pop("parent_content", None)
+             r.pop("parent_content", None)
         print(json.dumps(results, indent=2, ensure_ascii=False))
     else:
         print(f"\n{'='*60}")
@@ -229,12 +243,12 @@ def main():
                 score_info += f", rerank: {r['rerank_score']:.4f}"
             print(f"--- Result {i} ({score_info}) ---")
             print(f"Title:    {r['title']}")
-            print(f"Path:     {r['header_path']}")
+            if r['header_path']: print(f"Path:     {r['header_path']}")
             print(f"Category: {r['category']}")
-            print(f"Source:   {r['source']}")
+            if r['source']: print(f"Source:   {r['source']}")
             print(f"\n{r['content'][:800]}")
             if r.get("parent_content") and not args.no_parent:
-                print(f"\n  [Parent page: {len(r['parent_content'])} chars available]")
+                print(f"\n  [Parent Overview Available]")
             print()
             
         if args.chat and answer:

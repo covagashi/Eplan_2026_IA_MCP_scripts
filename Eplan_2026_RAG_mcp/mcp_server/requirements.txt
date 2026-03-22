@@ -1,11 +1,15 @@
 # EPLAN MCP Server Dependencies
 
 # MCP SDK
-mcp
+mcp>=0.1.0
 
 # .NET interop for EPLAN API
 pythonnet>=3.0.0
 
-# RAG - Documentation semantic search
+# RAG - Documentation semantic search (SOTA 2026 Stack)
 chromadb>=0.5.0
 sentence-transformers>=3.0.0
+llama-index-core>=0.10.0
+llama-index-embeddings-huggingface>=0.2.0
+llama-index-vector-stores-chroma>=0.1.0
+llama-index-retrievers-bm25>=0.1.0
