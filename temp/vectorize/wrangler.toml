@@ -1,0 +1,10 @@
+name = "ai-vectorize-mcp"
+main = "worker.js"
+compatibility_date = "2026-03-23"
+
+[ai]
+binding = "AI"
+
+[[vectorize]]
+binding = "VECTOR_INDEX"
+index_name = "ai-knowledge-base"

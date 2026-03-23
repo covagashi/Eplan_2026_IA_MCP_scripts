@@ -37,7 +37,7 @@ def extract_frontmatter(text: str) -> tuple[dict, str]:
 
 def main():
     print("=" * 60)
-    print("🚀 EPLAN EEC PRO RAG Indexer - SOTA 2026 Pipeline")
+    print("EPLAN EEC PRO RAG Indexer - SOTA 2026 Pipeline")
     print("=" * 60)
 
     # 1. Pipeline Settings
@@ -133,7 +133,7 @@ def main():
     with open(parent_path, 'w', encoding='utf-8') as f:
         json.dump(parent_map, f, ensure_ascii=False)
         
-    print(f"\n✅ Done! SOTA Architecture deployed to {DB_DIR.absolute()}")
+    print(f"\nDone! SOTA Architecture deployed to {DB_DIR.absolute()}")
 
 if __name__ == "__main__":
     main()
