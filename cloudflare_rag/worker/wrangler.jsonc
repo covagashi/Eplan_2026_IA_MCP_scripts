@@ -30,7 +30,7 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_classes": ["EplanRAGMCP"]
+      "new_sqlite_classes": ["EplanRAGMCP"]
     }
   ],
 
