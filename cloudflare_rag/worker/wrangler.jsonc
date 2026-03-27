@@ -34,6 +34,11 @@
     }
   ],
 
+  // Alias to resolve dynamic imports from agents package
+  "alias": {
+    "ai": "./node_modules/ai/dist/index.mjs"
+  },
+
   // Custom domain
   "routes": [
     {
