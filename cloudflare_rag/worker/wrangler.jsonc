@@ -17,6 +17,18 @@
     }
   ],
 
+  // Migration to remove old Durable Object class
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["EplanRAGMCP"]
+    },
+    {
+      "tag": "v2",
+      "deleted_classes": ["EplanRAGMCP"]
+    }
+  ],
+
   // Custom domain
   "routes": [
     {
