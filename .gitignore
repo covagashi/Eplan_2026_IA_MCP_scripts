@@ -53,3 +53,10 @@ skills-lock.json
 .agent
 .jules
 
+# Cloudflare
+node_modules/
+.wrangler/
+.dev.vars
+cloudflare_rag/migration/data/
+*.ndjson
+
