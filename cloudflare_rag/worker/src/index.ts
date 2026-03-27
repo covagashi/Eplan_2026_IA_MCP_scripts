@@ -150,6 +150,7 @@ export default {
 
     // --- REST endpoints ---
     try {
+      // Public endpoints (no auth required)
       if (path === "/health") {
         return json(
           { status: "ok", mcp: true, timestamp: new Date().toISOString() },
@@ -158,15 +159,19 @@ export default {
         );
       }
 
-      if (path === "/search" && request.method === "POST") {
-        return await handleSearch(request, env, corsHeaders);
-      }
-
       if (path === "/stats") {
         return await handleStats(env, corsHeaders);
       }
 
+      // Search: public read, no auth needed
+      if (path === "/search" && request.method === "POST") {
+        return await handleSearch(request, env, corsHeaders);
+      }
+
+      // Write endpoints: require WORKER_API_KEY
       if (path === "/add-vectors" && request.method === "POST") {
+        const authError = checkAuth(request, env);
+        if (authError) return authError;
         return await handleAddVectors(request, env, corsHeaders);
       }
 
@@ -176,6 +181,15 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env>;
+
+// --- Auth ---
+
+function checkAuth(request: Request, env: Env): Response | null {
+  if (!env.WORKER_API_KEY) return null; // no key configured = no auth
+  const auth = request.headers.get("Authorization");
+  if (auth === `Bearer ${env.WORKER_API_KEY}`) return null;
+  return json({ error: "Unauthorized. Set Authorization: Bearer <WORKER_API_KEY>" }, 401);
+}
 
 // --- REST handlers ---
 
