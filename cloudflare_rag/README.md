@@ -1,10 +1,10 @@
-# EPLAN RAG MCP Server (Cloudflare)
+# EPLAN RAG documents MCP Server (Cloudflare)
 
-Servidor MCP remoto que permite a Claude buscar en la documentacion de EPLAN (API Reference, User Guide, hidden actions) usando busqueda semantica con vectores.
+Remote MCP server that allows Claude to search the EPLAN documentation (API Reference, User Guide, hidden actions) using semantic search with vectors.
 
-Desplegado en Cloudflare Workers con Vectorize + Workers AI.
+Deployed on Cloudflare Workers with Vectorize + Workers AI.
 
-## Arquitectura
+## Architecture
 
 ```
 Claude Code  -->  MCP (Streamable HTTP)  -->  Cloudflare Worker
@@ -17,13 +17,7 @@ Claude Code  -->  MCP (Streamable HTTP)  -->  Cloudflare Worker
 
 ## Instalacion del MCP en Claude Code
 
-### Opcion 1: HTTP directo (recomendado)
-
-```bash
-claude mcp add --transport http eplan-rag https://rag2026.covaga.xyz/mcp
-```
-
-### Opcion 2: via mcp-remote (si HTTP directo no funciona)
+### via mcp-remote
 
 ```bash
 claude mcp add eplan-rag -- cmd /c npx mcp-remote https://rag2026.covaga.xyz/mcp
@@ -35,75 +29,43 @@ claude mcp add eplan-rag -- cmd /c npx mcp-remote https://rag2026.covaga.xyz/mcp
 claude mcp list
 ```
 
-Deberia aparecer `eplan-rag` en la lista. Luego dentro de Claude Code:
+Should show `eplan-rag` in the list. Then inside Claude Code:
 
 ```
 /mcp
 ```
 
-Deberia mostrar `eplan-rag` conectado con 2 tools disponibles.
+Should show `eplan-rag` connected with 2 tools available.
 
-## Tools disponibles
+## Tools available
 
-| Tool | Descripcion |
+| Tool | Description |
 |------|-------------|
-| `eplan_search` | Busqueda semantica en la documentacion de EPLAN. Soporta filtro por categoria (API Reference, User Guide, Api) |
-| `eplan_stats` | Estadisticas del indice vectorial (cantidad de vectores, dimensiones, metrica) |
+| `eplan_search` | Semantic search in EPLAN documentation. Supports filtering by category (API Reference, User Guide, Api) |
+| `eplan_stats` | Statistics of the vector index (number of vectors, dimensions, metric) |
 
-### Ejemplo de uso
 
-Dentro de Claude Code, simplemente pregunta:
+## REST Endpoints
 
-```
-Como cierro un proyecto en EPLAN con la API?
-```
+In addition to the MCP, the worker exposes direct REST endpoints:
 
-Claude usara automaticamente `eplan_search` para buscar la documentacion relevante.
-
-## Endpoints REST
-
-Ademas del MCP, el worker expone endpoints REST directos:
-
-| Metodo | Endpoint | Descripcion |
+| Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/health` | Health check |
-| POST | `/search` | Busqueda semantica (body: `{"query": "...", "topK": 5}`) |
+| POST | `/search` | Semantic search (body: `{"query": "...", "topK": 5}`) |
 | GET | `/stats` | Estadisticas del indice |
 | POST | `/add-vectors` | Insertar vectores (requiere `Authorization: Bearer <WORKER_API_KEY>`) |
 
-## Deploy
 
-### Requisitos
-
-- Cuenta de Cloudflare con Workers, Vectorize y Workers AI habilitados
-- Node.js instalado
-- `wrangler` CLI (`npm install -g wrangler`)
-
-### Pasos
-
-```bash
-cd cloudflare_rag/worker
-npm install
-npx wrangler deploy
-```
-
-### Configurar el API key para escritura
-
-```bash
-npx wrangler secret put WORKER_API_KEY --name eplan-rag-mcp
-```
-
-Esto protege el endpoint `/add-vectors` para que solo usuarios autorizados puedan insertar vectores.
-
-## Estructura
+## Structure
 
 ```
 cloudflare_rag/
 ├── worker/
 │   ├── src/
 │   │   └── index.ts          # Worker principal (MCP + REST)
-│   ├── wrangler.jsonc         # Configuracion de Cloudflare
+│   ├── wrangler.jsonc         # Cloudflare configuration
 │   ├── package.json
 │   └── tsconfig.json
-└── README.md                  # Este archivo
+└── README.md                  # This file
 ```
