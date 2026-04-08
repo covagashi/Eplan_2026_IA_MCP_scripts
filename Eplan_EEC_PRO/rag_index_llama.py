@@ -124,7 +124,7 @@ def main():
     print(f"    -> Generated {len(final_nodes)} high-quality vector nodes.")
     
     print("[*] Building VectorStoreIndex (Embedding Vectors Generation)...")
-    index = VectorStoreIndex(final_nodes, storage_context=storage_context, show_progress=True)
+    index = VectorStoreIndex(final_nodes, storage_context=storage_context, show_progress=True, store_nodes_override=True)
     
     print(f"[*] Persisting Docstore (required for BM25 Hybrid Local Search)...")
     index.storage_context.persist(persist_dir=str(DB_DIR))
