@@ -47,7 +47,7 @@ Should show `eplan-rag` connected with 2 tools available.
 
 ## REST Endpoints
 
-In addition to the MCP, the worker exposes direct REST endpoints:
+In addition to the MCP, the worker exposes a direct REST API. The base URL is `https://rag2026.covaga.xyz`.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -55,6 +55,28 @@ In addition to the MCP, the worker exposes direct REST endpoints:
 | POST | `/search` | Semantic search (body: `{"query": "...", "topK": 5}`) |
 | GET | `/stats` | Estadisticas del indice |
 | POST | `/add-vectors` | Insertar vectores (requiere `Authorization: Bearer <WORKER_API_KEY>`) |
+
+### Usage Examples
+
+**1. Search using cURL (Windows CMD)**
+```cmd
+curl -X POST https://rag2026.covaga.xyz/search -H "Content-Type: application/json" -d "{\"query\": \"export project\", \"topK\": 3}"
+```
+
+**2. Search using Python**
+```python
+import requests
+
+url = "https://rag2026.covaga.xyz/search"
+payload = {
+    "query": "export project",
+    "topK": 3
+}
+headers = {"Content-Type": "application/json"}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())
+```
 
 
 ## Structure

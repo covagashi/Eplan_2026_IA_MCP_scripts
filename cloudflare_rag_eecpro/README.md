@@ -77,12 +77,37 @@ Should show `eecpro-rag` connected with 2 tools available.
 
 ## REST Endpoints
 
+In addition to the MCP, the worker exposes a direct REST API. The base URL is `https://rageecpro.covaga.xyz`.
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/health` | Health check |
 | POST | `/search` | Semantic search (body: `{"query": "...", "topK": 5}`) |
 | GET | `/stats` | Index statistics |
 | POST | `/add-vectors` | Insert vectors (requires `Authorization: Bearer <WORKER_API_KEY>`) |
+
+### Usage Examples
+
+**1. Search using cURL (Windows CMD)**
+```cmd
+curl -X POST https://rageecpro.covaga.xyz/search -H "Content-Type: application/json" -d "{\"query\": \"job server configuration\", \"topK\": 3, \"category\": \"eecjobserver\"}"
+```
+
+**2. Search using Python**
+```python
+import requests
+
+url = "https://rageecpro.covaga.xyz/search"
+payload = {
+    "query": "job server configuration",
+    "topK": 3,
+    "category": "eecjobserver" # Optional filter
+}
+headers = {"Content-Type": "application/json"}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())
+```
 
 
 ## Structure
