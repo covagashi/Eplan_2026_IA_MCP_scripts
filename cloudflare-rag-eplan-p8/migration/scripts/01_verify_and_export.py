@@ -11,8 +11,8 @@ import numpy as np
 
 # --- Config ---
 CHROMA_DB_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "..",
-    "Eplan_2026_RAG_mcp", "chroma_db_sota"
+    os.path.dirname(__file__), "..", "..", "..",
+    "eplan-p8-mcp-server", "chroma_db_sota"
 )
 COLLECTION_NAME = "eplan_docs"
 OUTPUT_DIR = os.path.dirname(__file__)
@@ -26,33 +26,33 @@ def cosine_similarity(a, b):
 
 def main():
     print("=" * 60)
-    print("PASO 1: Verificar ChromaDB RAG")
+    print("STEP 1: Verify ChromaDB RAG")
     print("=" * 60)
 
     db_path = os.path.abspath(CHROMA_DB_PATH)
     print(f"DB path: {db_path}")
 
     if not os.path.exists(db_path):
-        print(f"ERROR: No existe {db_path}")
+        print(f"ERROR: Path does not exist: {db_path}")
         sys.exit(1)
 
     client = chromadb.PersistentClient(path=db_path)
     collections = client.list_collections()
-    print(f"Colecciones: {[c.name for c in collections]}")
+    print(f"Collections: {[c.name for c in collections]}")
 
     collection = client.get_collection(COLLECTION_NAME)
     total = collection.count()
     print(f"'{COLLECTION_NAME}': {total} embeddings")
 
     # --- Verify data integrity ---
-    print("\n--- Verificacion de datos ---")
+    print("\n--- Data verification ---")
     sample = collection.get(
         limit=5,
         include=["embeddings", "metadatas", "documents"],
     )
 
     dims = len(sample["embeddings"][0]) if sample["embeddings"] is not None and len(sample["embeddings"]) > 0 else 0
-    print(f"Dimensiones: {dims}")
+    print(f"Dimensions: {dims}")
     assert dims == 768, f"Expected 768 dims, got {dims}"
 
     print(f"Sample IDs: {sample['ids'][:3]}")
@@ -90,7 +90,7 @@ def main():
 
     # --- Export ---
     print("\n" + "=" * 60)
-    print("PASO 2: Exportar para Cloudflare Vectorize")
+    print("STEP 2: Export for Cloudflare Vectorize")
     print("=" * 60)
 
     batch_num = 0

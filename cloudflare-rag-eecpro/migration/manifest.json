@@ -1,5 +1,5 @@
 {
-  "source": "Eplan_EEC_PRO/rag_db_llama_chroma",
+  "source": "eplan-eecpro-rag-builder/rag_db_llama_chroma",
   "collection": "eplan_docs",
   "total_vectors": 6760,
   "dimensions": 768,

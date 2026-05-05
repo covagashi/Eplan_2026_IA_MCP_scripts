@@ -4,14 +4,14 @@ on:
   push:
     branches: [main]
     paths:
-      - "cloudflare_rag/worker/**"
+      - "cloudflare-rag-eplan-p8/worker/**"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: cloudflare_rag/worker
+        working-directory: cloudflare-rag-eplan-p8/worker
     steps:
       - uses: actions/checkout@v4
 

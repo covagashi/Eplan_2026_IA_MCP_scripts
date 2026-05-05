@@ -1,170 +1,119 @@
-# EPLAN Automation Tools
+# EPLAN AI Automation Toolkit
 
-This repository contains tools for automating EPLAN Electric P8 using AI assistants.
-Currently is 100% functional
+A collection of AI-assisted automation tools for **EPLAN Electric P8** and **EPLAN EEC Pro 2026**, built around the Model Context Protocol (MCP).
 
-## MCP Server (Recommended)
+The repo contains four independent sub-projects: a local MCP server that drives EPLAN P8 directly, a documentation scraper / local RAG indexer for EEC Pro, and two remote MCP servers hosted on Cloudflare Workers that expose the indexed documentation via semantic search.
 
-The **MCP Server** (`mcp_server/`) allows any AI to control EPLAN directly through the Model Context Protocol.
+## Repository Layout
 
-### What is MCP?
+```
+.
+├── eplan-p8-mcp-server/          # LOCAL: MCP server that controls EPLAN P8 (and embedded RAG engine)
+├── eplan-eecpro-rag-builder/     # LOCAL: scraper + LlamaIndex/ChromaDB indexer for EEC Pro docs
+├── cloudflare-rag-eplan-p8/      # REMOTE: Cloudflare Worker that serves the P8 docs RAG over MCP
+└── cloudflare-rag-eecpro/        # REMOTE: Cloudflare Worker that serves the EEC Pro docs RAG over MCP
+```
 
-**MCP (Model Context Protocol)** is an open standard that allows AI assistants like Claude to interact with external tools and services. Instead of just generating code, Claude can actually *execute* actions in EPLAN in real-time.
+| Folder | Type | Purpose | EPLAN product |
+|--------|------|---------|---------------|
+| `eplan-p8-mcp-server/` | Local Python MCP | Drive a running EPLAN instance from Claude (open/close projects, exports, scripts, etc.) | EPLAN Electric P8 |
+| `eplan-eecpro-rag-builder/` | Local Python pipeline | Scrape official docs and build a local ChromaDB vector index | EPLAN EEC Pro 2026 |
+| `cloudflare-rag-eplan-p8/` | Remote Cloudflare Worker | Serve the P8 doc index as a remote MCP + REST API | EPLAN Electric P8 |
+| `cloudflare-rag-eecpro/` | Remote Cloudflare Worker | Serve the EEC Pro doc index as a remote MCP + REST API | EPLAN EEC Pro 2026 |
 
-With MCP, you can:
-- Connect to a running EPLAN instance
-- Execute EPLAN actions directly from Claude
-- Get real-time feedback on operations
-- Automate complex workflows through natural conversation
+Each sub-project has its own README with installation and usage details.
 
-### Prerequisites
+## What is MCP?
 
-- **Python 3.10+** installed and added to PATH
-- **EPLAN Electric P8** installed (2024 or later recommended)
-- **Claude Code CLI** installed ([Installation guide](https://docs.anthropic.com/claude-code))
+**MCP (Model Context Protocol)** is an open standard that lets AI assistants like Claude interact with external tools and services. Instead of just generating code, Claude can actually *execute* actions in EPLAN in real-time and consult documentation through semantic search.
 
-### Installation Steps
+## Quick Start
 
-#### Step 1: Install Python Dependencies
+### Local EPLAN automation (P8)
 
-Open a terminal and run:
+The local MCP server lets Claude drive a running EPLAN instance.
 
 ```bash
 pip install pythonnet mcp
+claude mcp add eplan -- python YOURPATH/eplan-p8-mcp-server/mcp_server/server.py
+claude mcp list   # should list "eplan"
 ```
 
-#### Step 2: Configure Claude Code CLI
+Then start EPLAN, open Claude Code, and say `connect to eplan`. See [`eplan-p8-mcp-server/mcp_server/README.md`](eplan-p8-mcp-server/mcp_server/README.md) for the full guide.
 
-Add the MCP server to Claude Code. Replace `YOURPATH` with the actual path to the scripts folder:
+![Claude CLI configured](image.png)
+
+### Remote documentation RAGs (P8 and EEC Pro)
+
+These are already deployed and ready to use — no local data required:
 
 ```bash
-claude mcp add eplan -- python YOURPATH\Eplan_2026_IA_MCP_scripts\mcp_server\server.py
+# EPLAN Electric P8 documentation
+claude mcp add eplan-rag -- cmd /c npx mcp-remote https://rag2026.covaga.xyz/mcp
+
+# EPLAN EEC Pro 2026 documentation
+claude mcp add eecpro-rag -- cmd /c npx mcp-remote https://rageecpro.covaga.xyz/mcp
 ```
 
-**Example with full path:**
-```bash
-claude mcp add eplan -- python D:\1_GENERAL\Eplan_2026_IA_MCP_scripts\mcp_server\server.py
-```
+See [`cloudflare-rag-eplan-p8/README.md`](cloudflare-rag-eplan-p8/README.md) and [`cloudflare-rag-eecpro/README.md`](cloudflare-rag-eecpro/README.md) for the tools, REST endpoints, and architecture.
 
-#### Step 3: Verify Configuration
+### Building the local EEC Pro RAG (optional)
 
-Check that the MCP server was added correctly:
-
-```bash
-claude mcp list
-```
-
-You should see `eplan` in the list of configured MCP servers.
-
-#### Step 4: Start EPLAN
-
-1. Open EPLAN Electric P8
-2. Make sure it's fully loaded before connecting
-
-#### Step 5: Start Claude Code and Connect
-
-1. Open a terminal and run `claude`
-2. Ask Claude to connect to EPLAN:
-   ```
-   connect to eplan
-   ```
-3. Claude will auto-detect the running EPLAN instance and connect
-
-### Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| "pythonnet not found" | Run `pip install pythonnet` |
-| "Cannot connect to EPLAN" | Make sure EPLAN is running and fully loaded |
-| "MCP server not found" | Check the path in `claude mcp list` and verify the file exists |
-| "Port not found" | EPLAN API server may not be running; restart EPLAN |
-
-### Uninstalling
-
-To remove the MCP server from Claude Code:
-
-```bash
-claude mcp remove eplan
-```
-
-![Claude cli configured](image.png)
-
----
+If you want to (re)build the EEC Pro vector index locally — for instance to push it to your own Cloudflare account — see [`eplan-eecpro-rag-builder/README.md`](eplan-eecpro-rag-builder/README.md).
 
 ## Adding New EPLAN Actions
 
-The MCP server is designed to be easily extensible. Here's how to add new EPLAN actions:
+The local MCP server is designed to be easily extensible. To add a new EPLAN action:
 
+### 1. Implement the action
 
-### Step 1: Add the Function to `eplan_actions.py`
+In `eplan-p8-mcp-server/mcp_server/actions/<your_module>.py`:
 
 ```python
-def example_project(project_path: str) -> dict:
-    """
-    Open an EPLAN project.
-    Action: example
-    """
+def open_project(project_path: str) -> dict:
+    """Open an EPLAN project."""
     manager = get_manager(TARGET_VERSION)
-
     if not manager.connected:
         return {"success": False, "message": "Not connected to EPLAN"}
-
-    # Note: Use forward slashes or escape backslashes in the path
-    return manager.execute_action(f'example /param1:"{project_path}"')
+    # Use forward slashes or escape backslashes in the path
+    return manager.execute_action(f'XPrjActionProjectOpen /Path:"{project_path}"')
 ```
 
-### Step 3: Register the Tool in `server.py`
+### 2. Register the tool
+
+In `eplan-p8-mcp-server/mcp_server/server.py`:
 
 ```python
-from eplan_actions import close_project, example_project  # Add your import
+from actions.project import open_project
 
 @mcp.tool()
-def example_project(project_path: str) -> str:
+def eplan_open_project(project_path: str) -> str:
     """Open an EPLAN project by path."""
-    return json.dumps(example_project(project_path), indent=2)
+    return json.dumps(open_project(project_path), indent=2)
 ```
 
-### Step 4: Restart Claude CLI
+### 3. Restart Claude CLI
 
-The new tool will be available after restarting Claude CLI.
+The new tool will be available after restarting Claude.
 
-![Eplan test](image-1.png)
+![EPLAN test](image-1.png)
 
-### Tips for Adding Actions
+### Tips
 
-1. **Test in EPLAN first** - Use EPLAN's scripting to verify the action works
-2. **Check parameters** - Each action has specific parameters; refer to the API documentation
-3. **Handle paths carefully** - Windows paths need escaping or use forward slashes
-4. **Add meaningful docstrings** - Claude uses the docstring to understand when to use the tool
-
----
-
-## OG Project Structure
-
-```
-LazyScriptingEplan/
-├── mcp_server/                 # MCP Server for Claude integration
-│   ├── server.py               # Main MCP server with tool definitions
-│   ├── eplan_connection.py     # EPLAN connection management
-│   ├── eplan_actions.py        # EPLAN action implementations
-│   └── README.md               # MCP installation guide
-│
-└── README.md                   # This file
-```
-
----
+1. **Test in EPLAN first** — use EPLAN's scripting console to verify the action works.
+2. **Check parameters** — every action has specific parameters; refer to the EPLAN API docs.
+3. **Handle paths carefully** — Windows paths need escaping (`\\`) or forward slashes (`/`).
+4. **Write meaningful docstrings** — Claude uses the docstring to decide when to call the tool.
 
 ## Changing EPLAN Version
 
-The target EPLAN version is configured in **3 files**. Update all of them when switching versions (e.g. from `"2025"` to `"2026"`):
+The target EPLAN version is configured in **3 files**. Update all of them when switching versions (e.g. `"2025"` → `"2026"`):
 
 | File | What to change |
 |------|----------------|
-| `mcp_server/server.py` | `TARGET_VERSION = "2025"` |
-| `mcp_server/actions/_base.py` | `TARGET_VERSION = "2025"` |
-| `mcp_server/eplan_connection.py` | Default parameter in `__init__` and `get_manager` (`target_version: str = "2025"`) |
-
----
+| `eplan-p8-mcp-server/mcp_server/server.py` | `TARGET_VERSION = "2025"` |
+| `eplan-p8-mcp-server/mcp_server/actions/_base.py` | `TARGET_VERSION = "2025"` |
+| `eplan-p8-mcp-server/mcp_server/eplan_connection.py` | Default parameter in `__init__` and `get_manager` (`target_version: str = "2025"`) |
 
 ## Resources
 

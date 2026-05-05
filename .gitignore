@@ -57,6 +57,7 @@ skills-lock.json
 node_modules/
 .wrangler/
 .dev.vars
-cloudflare_rag/migration/data/
+cloudflare-rag-eplan-p8/migration/data/
+cloudflare-rag-eecpro/migration/data/
 *.ndjson
 

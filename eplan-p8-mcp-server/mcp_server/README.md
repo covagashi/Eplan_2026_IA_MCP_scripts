@@ -13,7 +13,7 @@ Remote control of EPLAN from Claude via MCP (Model Context Protocol).
 ### 1. Install Dependencies
 
 ```bash
-cd YOUR_PATH\LazyScriptingEplan\mcp_server
+cd YOUR_PATH\eplan-p8-mcp-server\mcp_server
 pip install pythonnet mcp
 ```
 
@@ -38,7 +38,7 @@ Add the MCP server configuration:
   "mcpServers": {
     "eplan": {
       "command": "python",
-      "args": ["YOUR_PATH\\LazyScriptingEplan\\mcp_server\\server.py"]
+      "args": ["YOUR_PATH\\eplan-p8-mcp-server\\mcp_server\\server.py"]
     }
   }
 }
@@ -59,7 +59,7 @@ Edit `%APPDATA%\Claude\claude_desktop_config.json`:
   "mcpServers": {
     "eplan": {
       "command": "python",
-      "args": ["YOUR_PATH\\LazyScriptingEplan\\mcp_server\\server.py"]
+      "args": ["YOUR_PATH\\eplan-p8-mcp-server\\mcp_server\\server.py"]
     }
   }
 }

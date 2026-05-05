@@ -9,12 +9,12 @@ echo "============================================"
 
 # Step 1: Login (opens browser)
 echo ""
-echo "PASO 1: Login en Cloudflare"
+echo "STEP 1: Cloudflare login"
 npx wrangler login
 
 # Step 2: Create Vectorize index
 echo ""
-echo "PASO 2: Crear indice Vectorize (768 dims, cosine)"
+echo "STEP 2: Create Vectorize index (768 dims, cosine)"
 npx wrangler vectorize create eplan-knowledge-base \
   --dimensions=768 \
   --metric=cosine \
@@ -22,7 +22,7 @@ npx wrangler vectorize create eplan-knowledge-base \
 
 # Step 3: Import vectors batch by batch
 echo ""
-echo "PASO 3: Importar vectores (57,492 vectors in 12 batches)"
+echo "STEP 3: Import vectors (57,492 vectors in 12 batches)"
 for batch_file in vectors_batch_*.ndjson; do
   echo "  Importing: $batch_file"
   npx wrangler vectorize insert eplan-knowledge-base \
@@ -33,20 +33,20 @@ done
 
 # Step 4: Deploy Worker
 echo ""
-echo "PASO 4: Deploy Worker"
+echo "STEP 4: Deploy Worker"
 npx wrangler deploy
 
 # Step 5: (Optional) Set API key secret
 echo ""
-echo "PASO 5: (Opcional) Configurar API key"
-echo "Para proteger el Worker, ejecuta:"
+echo "STEP 5: (Optional) Configure API key"
+echo "To protect the Worker, run:"
 echo "  npx wrangler secret put WORKER_API_KEY"
 echo ""
 
 # Step 6: Test
 echo ""
-echo "PASO 6: Test"
-WORKER_URL=$(npx wrangler whoami 2>/dev/null | grep -oP 'https://[^\s]+' || echo "https://eplan-rag-mcp.<TU_SUBDOMAIN>.workers.dev")
+echo "STEP 6: Test"
+WORKER_URL=$(npx wrangler whoami 2>/dev/null | grep -oP 'https://[^\s]+' || echo "https://eplan-rag-mcp.<YOUR_SUBDOMAIN>.workers.dev")
 echo "Health check:"
 echo "  curl $WORKER_URL/health"
 echo ""
