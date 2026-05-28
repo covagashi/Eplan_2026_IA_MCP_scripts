@@ -10,6 +10,10 @@ Requirements:
 import sys
 import os
 import logging
+import re
+import json
+import time
+import uuid
 from typing import Optional, List
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -183,24 +187,157 @@ class EPLANConnectionManager:
 
         Args:
             action: The action string to execute
-            quiet_mode: If True, suppresses all EPLAN dialogs during execution
+            quiet_mode: If True, suppresses all EPLAN dialogs during execution using a C# script.
         """
         if not self.connected or not self.client:
             return {"success": False, "message": "Not connected"}
 
         try:
-            logger.info(f"Executing: {action} (quiet_mode={quiet_mode})")
-            self.client.SynchronousMode = True
+            # Parse the action name (first word before any space or '/')
+            action_name_match = re.match(r'^([^\s/]+)', action)
+            action_name = action_name_match.group(1) if action_name_match else action
+            action_name_lower = action_name.lower()
 
-            # QuietMode is not available via Remote Client API
-            # Execute action directly
-            self.client.ExecuteAction(action)
+            # RegisterScript, ExecuteScript, and UnregisterScript MUST run directly
+            # to avoid infinite recursion. Also run directly if quiet_mode is False.
+            if action_name_lower in ("registerscript", "executescript", "unregisterscript") or not quiet_mode:
+                logger.info(f"Executing directly: {action}")
+                self.client.SynchronousMode = True
+                self.client.ExecuteAction(action)
+                return {"success": True, "message": f"Executed directly: {action}", "action": action}
 
-            return {"success": True, "message": f"Executed: {action}", "action": action}
+            # Parse parameters
+            params = {}
+            matches = re.finditer(r'/([a-zA-Z0-9_]+):(?:("([^"]*)"|([^\s]*)))', action)
+            for m in matches:
+                key = m.group(1)
+                val = m.group(3) if m.group(2).startswith('"') else m.group(4)
+                params[key] = val
+
+            # Generate directories
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            script_dir = os.path.join(base_dir, "scripts", "generated")
+            results_dir = os.path.join(base_dir, "scripts", "results")
+            os.makedirs(script_dir, exist_ok=True)
+            os.makedirs(results_dir, exist_ok=True)
+
+            exec_id = str(uuid.uuid4())[:8]
+            script_path = os.path.join(script_dir, f"exec_action_{exec_id}.cs")
+            result_path = os.path.join(results_dir, f"exec_result_{exec_id}.json")
+
+            # C# parameters generation
+            acc_parameters_code = ""
+            check_keys = ["PROJECT", "PROJECTS", "PAGES", "LAYOUTSPACES", "PropertyValue", "value", "Value", "Result", "Output", "Success", "Count", "Error", "Message"]
+            for key, val in params.items():
+                escaped_val = val.replace("\\", "\\\\").replace('"', '\\"')
+                acc_parameters_code += f'\n                acc.AddParameter("{key}", "{escaped_val}");'
+                if key not in check_keys:
+                    check_keys.append(key)
+
+            check_keys_code = ", ".join([f'"{k}"' for k in check_keys])
+            escaped_result_path = result_path.replace("\\", "\\\\")
+
+            # C# Script Content
+            script_content = f"""using System;
+using System.IO;
+using System.Collections.Generic;
+using Eplan.EplApi.ApplicationFramework;
+using Eplan.EplApi.Scripting;
+
+public class QuietExecute_{exec_id}
+{{
+    [Start]
+    public void Run()
+    {{
+        var results = new Dictionary<string, object>();
+        try
+        {{
+            using (var qm = new QuietModeStep(QuietModes.ShowNoDialogs))
+            {{
+                var acc = new ActionCallingContext();
+                {acc_parameters_code}
+                
+                var cli = new CommandLineInterpreter();
+                bool success = cli.Execute("{action_name}", acc);
+                results["success"] = success;
+                
+                var returnParams = new Dictionary<string, string>();
+                string[] checkKeys = new string[] {{ {check_keys_code} }};
+                foreach (var key in checkKeys)
+                {{
+                    try
+                    {{
+                        string val = "";
+                        acc.GetParameter(key, ref val);
+                        if (!string.IsNullOrEmpty(val))
+                        {{
+                            returnParams[key] = val;
+                        }}
+                    }}
+                    catch {{}}
+                }}
+                results["parameters"] = returnParams;
+            }}
+        }}
+        catch (Exception ex)
+        {{
+            results["success"] = false;
+            results["error"] = ex.Message;
+        }}
+        
+        string json = Newtonsoft.Json.JsonConvert.SerializeObject(results);
+        File.WriteAllText("{escaped_result_path}", json);
+    }}
+}}
+"""
+            # Write script to disk
+            with open(script_path, "w", encoding="utf-8") as f:
+                f.write(script_content)
+
+            # Register script
+            logger.info(f"Wrapping action via script: {action_name} (exec_id={exec_id})")
+            reg_result = self.execute_action(f'RegisterScript /ScriptFile:"{script_path}"', quiet_mode=False)
+            if not reg_result.get("success"):
+                return {"success": False, "message": f"Failed to register execution script: {reg_result.get('message')}"}
+
+            # Execute script
+            exec_result = self.execute_action(f'ExecuteScript /ScriptFile:"{script_path}"', quiet_mode=False)
+            if not exec_result.get("success"):
+                return {"success": False, "message": f"Failed to execute action via script: {exec_result.get('message')}"}
+
+            # Wait for result file
+            timeout = 30.0
+            start_time = time.time()
+            while not os.path.exists(result_path):
+                if time.time() - start_time > timeout:
+                    return {"success": False, "message": "Timeout waiting for scripted action execution result"}
+                time.sleep(0.1)
+
+            # Read results
+            time.sleep(0.05) # Small sleep to let OS release file lock
+            with open(result_path, "r", encoding="utf-8") as f:
+                res_data = json.load(f)
+
+            return res_data
+
         except Exception as e:
-            self.last_error = f"Execution failed: {e}"
+            self.last_error = f"Scripted execution failed: {e}"
             logger.error(self.last_error)
             return {"success": False, "message": self.last_error, "action": action}
+
+        finally:
+            # Cleanup temp files
+            try:
+                if 'script_path' in locals() and os.path.exists(script_path):
+                    self.execute_action(f'UnregisterScript /ScriptFile:"{script_path}"', quiet_mode=False)
+                    os.remove(script_path)
+            except Exception:
+                pass
+            try:
+                if 'result_path' in locals() and os.path.exists(result_path):
+                    os.remove(result_path)
+            except Exception:
+                pass
 
     def disconnect(self) -> dict:
         """Disconnect from EPLAN."""

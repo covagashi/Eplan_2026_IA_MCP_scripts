@@ -25,8 +25,8 @@ Scripts have full access to `ActionCallingContext`, `CommandLineInterpreter`, an
 
 ### Actions to migrate (progressively)
 
-- [ ] Actions that show confirmation dialogs (e.g. delete pages, close project with unsaved changes)
-- [ ] Actions that require reading return values via `ActionCallingContext`
-- [ ] Export actions that may prompt for overwrite confirmation
-- [ ] Any action where silent/unattended execution is needed
+- [x] Actions that show confirmation dialogs (e.g. delete pages, close project with unsaved changes)
+- [x] Actions that require reading return values via `ActionCallingContext`
+- [x] Export actions that may prompt for overwrite confirmation
+- [x] Any action where silent/unattended execution is needed
 
