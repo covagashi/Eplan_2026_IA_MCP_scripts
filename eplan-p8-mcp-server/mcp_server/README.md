@@ -1,37 +1,108 @@
-# EPLAN MCP Server
+# EPLAN MCP Server (Dual API Mode)
 
-Remote control of EPLAN from Claude via MCP (Model Context Protocol).
+Remote control of **EPLAN Electric P8** from an LLM (e.g. Claude) via MCP (Model Context Protocol).
+
+The server connects to a running EPLAN instance through the EPLAN Remote Client API
+(pythonnet / CLR) and exposes **304 MCP tools**: 6 connection/utility tools plus
+**149 EPLAN actions in two execution flavours** (V1 and V2).
+
+- **V1 (Direct Execution)** — `eplan_v1_*`
+  Calls EPLAN actions directly via the Remote Client API (`client.ExecuteAction`).
+  Fast, but EPLAN may show interactive dialogs (confirmations, file pickers, …)
+  that block unattended execution.
+
+- **V2 (C# Scripted Execution — Recommended)** — `eplan_v2_*`
+  Wraps each EPLAN action in a dynamically generated C# script executed **inside
+  EPLAN's process** under `QuietMode` (`QuietModes.ShowNoDialogs`). Completely
+  silent, prevents blocking dialogs, and reads return values back from the
+  `ActionCallingContext`. Use this for batch / headless automation.
+
+---
+
+## Architecture
+
+```
+LLM (Claude)  -->  MCP Protocol  -->  FastMCP Server (server.py)
+                                           |
+                              +------------+------------+
+                              |                         |
+                           [API V1]                  [API V2]
+                     Direct Remoting API        C# Script Generator
+                     (client.ExecuteAction)   (QuietModeStep wrapper)
+                              |                         |
+                              +------------+------------+
+                                           |
+                                           v
+                                 EPLAN Process (P8)
+```
+
+How V2 works internally (`eplan_connection.py::execute_action(action, quiet_mode=True)`):
+
+1. Parse the action name and parameters.
+2. Generate a `.cs` script that runs the action inside
+   `using (var qm = new QuietModeStep(QuietModes.ShowNoDialogs)) { ... }`.
+3. `RegisterScript` → `ExecuteScript` → read a JSON result file → `UnregisterScript`.
+4. Return `{"success": bool, "parameters": {...}}`, where `parameters` are the
+   values EPLAN wrote back into the `ActionCallingContext` (e.g. `PROJECT`, `PAGES`).
+
+---
+
+## Directory Structure
+
+```
+eplan-p8-mcp-server/mcp_server/
+├── api/
+│   ├── v1/
+│   │   ├── actions/          # Direct-execution python action wrappers
+│   │   │   ├── _base.py      # _get_connected_manager, _build_action, TARGET_VERSION
+│   │   │   └── *.py          # one module per action category
+│   │   └── __init__.py
+│   └── v2/
+│       ├── actions/          # QuietMode wrappers (forced quiet_mode=True)
+│       │   ├── _base.py      # V2ManagerWrapper (forces QuietMode), TARGET_VERSION
+│       │   ├── scripted.py   # advanced APIs via C# (parts DB, typed settings, PathMap)
+│       │   └── *.py          # one module per action category
+│       └── __init__.py       # re-exports every action and defines __all__
+├── scripts/
+│   ├── generated/            # temporary C# scripts (auto-created, auto-deleted)
+│   └── results/              # temporary JSON results (auto-created, auto-deleted)
+├── server.py                 # MCP server: connection tools + dynamic V1/V2 registration
+├── eplan_connection.py       # EPLAN pythonnet connection manager + QuietMode wrapper
+├── requirements.txt
+└── README.md                 # This file
+```
+
+> Note: both `eplan_connection.py` and `api/*/actions/scripted.py` write their
+> temporary scripts/results under the single `scripts/generated` and
+> `scripts/results` folders.
+
+---
 
 ## Requirements
 
-- EPLAN installed (2024, 2025, or 2026)
-- Python 3.10+
-- Dependencies: `pip install pythonnet mcp`
+- **EPLAN Electric P8** installed (2024, 2025, or 2026)
+- **Python 3.10+** (64-bit, to match EPLAN's process)
+- Dependencies: `pip install -r requirements.txt` (`pythonnet`, `mcp`)
 
-## Installation for Claude CLI (Claude Code)
+---
 
-### 1. Install Dependencies
+## Installation for Claude Code
+
+### 1. Install dependencies
 
 ```bash
-cd YOUR_PATH\eplan-p8-mcp-server\mcp_server
-pip install pythonnet mcp
+cd eplan-p8-mcp-server\mcp_server
+pip install -r requirements.txt
 ```
 
-### 2. Configure Claude CLI
+### 2. Register the MCP server
 
-Edit your Claude CLI settings file. The location depends on your system:
-
-**Windows:**
-```
-%USERPROFILE%\.claude\settings.json
+```bash
+claude mcp add eplan -- python YOUR_PATH\eplan-p8-mcp-server\mcp_server\server.py
+claude mcp list   # "eplan" should appear
 ```
 
-**Linux/macOS:**
-```
-~/.claude/settings.json
-```
-
-Add the MCP server configuration:
+Or add it manually to `%USERPROFILE%\.claude\settings.json`:
 
 ```json
 {
@@ -44,67 +115,123 @@ Add the MCP server configuration:
 }
 ```
 
-> **Note:** On Linux/macOS, use forward slashes: `"/path/to/mcp_server/server.py"`
+### 3. Connect
 
-### 3. Restart Claude CLI
+Start EPLAN, open Claude Code, and say `connect to eplan`.
 
-Close and reopen Claude CLI for the changes to take effect.
+---
 
-## Installation for Claude Desktop
+## Tools
 
-Edit `%APPDATA%\Claude\claude_desktop_config.json`:
+### 1. Connection & utility tools (version-agnostic)
 
-```json
-{
-  "mcpServers": {
-    "eplan": {
-      "command": "python",
-      "args": ["YOUR_PATH\\eplan-p8-mcp-server\\mcp_server\\server.py"]
-    }
-  }
-}
+| Tool | Description |
+|------|-------------|
+| `eplan_servers` | Detect active EPLAN instances on the machine. |
+| `eplan_connect` | Connect to EPLAN (port auto-detected if omitted). |
+| `eplan_status` | Current connection details. |
+| `eplan_ping` | Check the connected instance is responding. |
+| `eplan_test` | Show a MessageBox inside EPLAN to verify end-to-end communication. |
+| `eplan_disconnect` | Close the active connection. |
+
+### 2. Versioned action tools (149 per version)
+
+Every EPLAN action is exposed in two forms, named `eplan_v1_<action>` and
+`eplan_v2_<action>`. Each tool's description and input schema are generated from
+the underlying Python function's docstring and type hints, so the connected LLM
+discovers what is available and how to call it automatically.
+
+- **V1 (`eplan_v1_*`)** — direct execution. Use only for simple/interactive tasks.
+- **V2 (`eplan_v2_*`, recommended)** — QuietMode + return-value capture.
+
+Action categories (each available in both V1 and V2):
+
+| Category | Examples |
+|----------|----------|
+| Project | `open_project`, `close_project`, `get_current_project`, `compress_project`, `synchronize_project` |
+| Backup / restore | `backup_project`, `backup_masterdata`, `restore_project`, `restore_masterdata` |
+| Export | `export_pdf_project`, `export_pdf_pages`, `export_dxf_*`, `export_dwg_*`, `export_graphics_*`, `export_pxf_project`, `export_3d` |
+| Import | `import_pxf_project`, `import_dwg_page`, `import_dxf_page`, `import_dxfdwg_files`, `import_pdf_comments`, `import_3d` |
+| Print | `print_project`, `print_pages` |
+| Check / verify | `check_project`, `check_pages`, `check_parts` |
+| Generate | `generate_connections`, `generate_cables` |
+| Reports | `update_reports`, `update_model_view_pages`, `create_model_views`, `create_copper_unfolds`, `create_drilling_views` |
+| Search | `search_devices`, `search_text`, `search_all_properties`, `search_page_data`, `search_project_data` |
+| Navigation / edit | `edit_open_page`, `edit_goto_device`, `edit_open_layout_space`, `close_pages`, `get_selected_pages`, `preview_page`, `navigate_to_eec` |
+| Renumber | `renumber_devices`, `renumber_pages`, `renumber_cables`, `renumber_terminals`, `renumber_connections` |
+| Translate | `translate_project`, `export_missing_translations`, `remove_language` |
+| Device list | `export_device_list`, `import_device_list`, `delete_device_list` |
+| Labels / layers | `create_labels`, `change_layer`, `export/import_graphical_layer_table` |
+| Macros | `generate_macros`, `prepare_macros`, `update_macros` |
+| Scripts | `register_script`, `unregister_script`, `execute_script` |
+| Settings | `export_settings`, `import_settings`, `set_setting`, `set_project_setting` |
+| Properties | `get/set_project_property`, `get/set_page_property`, `get/set_property`, `export/import_user_properties` |
+| Parts | `export/import_parts_list`, `select_part`, `set_parts_data_source`, `partsmanagement_*` |
+| PLC | `plc_export`, `plc_import` |
+| Workspace | `open_workspace`, `save_workspace`, `clean_workspace` |
+| Data exchange | `export_connections/functions/pages`, `dc_import`, `dc_export`, `export_*_definitions`, `export/import_subproject`, `masterdata_operation`, … |
+| Cabinet / 3D | `calculate_cabinet_weight`, `update_segments_filling`, `topology_operation`, `import_preplanning_data`, `export/import_segments_template` |
+| Production | `export_nc_data`, `export_production_wiring` |
+| Ribbon / add-ons | `export/import_ribbon_bar`, `load_api_module`, `register/unregister_addon`, `execute_raw_action` |
+| Scripted (V2-style, advanced APIs) | `parts_db_query/count/get_part/update/list_product_groups`, `settings_get/set_string/bool/int/double`, `pathmap_substitute`, `pathmap_get_common_paths`, `execute_custom_script` |
+
+---
+
+## Extending: add a new action
+
+The server registers tools **dynamically** from each actions package's `__all__`
+list — there is no per-tool `@mcp.tool()` boilerplate to write.
+
+1. Implement the function in `api/v2/actions/<module>.py` (and/or `api/v1/...`):
+
+   ```python
+   def my_action(project_name: str = None) -> dict:
+       """One-line summary the LLM will see as the tool description.
+
+       Args:
+           project_name: Project path (optional).
+       """
+       manager, error = _get_connected_manager()
+       if error:
+           return error
+       action = _build_action("SomeEplanAction", PROJECTNAME=project_name)
+       return manager.execute_action(action)
+   ```
+
+2. Export it in `api/v2/actions/__init__.py`: add it to the imports **and** to
+   `__all__`.
+
+3. Restart the MCP server. The tool appears as `eplan_v2_my_action`.
+
+Tips:
+- Write a meaningful docstring + type hints — they become the tool description
+  and input schema the LLM relies on.
+- Verify action names/parameters against the official EPLAN P8 docs (see the
+  remote RAG at `https://rag2026.covaga.xyz`).
+- Windows paths need escaping (`\\`) or forward slashes (`/`).
+
+---
+
+## Changing the target EPLAN version
+
+The version (e.g. `"2025"` → `"2026"`) is set in **4 files** — update all:
+
+| File | What to change |
+|------|----------------|
+| `server.py` | `TARGET_VERSION = "2025"` |
+| `api/v1/actions/_base.py` | `TARGET_VERSION = "2025"` |
+| `api/v2/actions/_base.py` | `TARGET_VERSION = "2025"` |
+| `eplan_connection.py` | default `target_version` in `__init__` and `get_manager` |
+
+---
+
+## Example session
+
+```
+User: Connect to EPLAN and open "C:\Projects\Test.elk" silently.
+LLM:  [eplan_connect]            -> Connected on port 49152
+      [eplan_v2_open_project]    -> {"success": true, "parameters": {"PROJECT": "C:\\Projects\\Test.elk"}}
+      Project opened in silent mode (V2 / QuietMode).
 ```
 
-Restart Claude Desktop.
-
-## Usage
-
-1. Open EPLAN manually
-2. In Claude, use the available tools:
-   - `eplan_servers` - Detect active EPLAN instances
-   - `eplan_connect` - Connect to EPLAN (port auto-detected)
-   - `eplan_status` - Get connection status
-   - `eplan_ping` - Verify EPLAN is responding
-   - `eplan_test` - Show a MessageBox in EPLAN (connection test)
-   - `eplan_close_project` - Close the current project
-   - `eplan_disconnect` - Disconnect from EPLAN
-
-## Example Session
-
-```
-User: Connect to EPLAN
-Claude: [calls eplan_connect]
-       Connected to EPLAN at localhost:49152
-
-User: Test the connection
-Claude: [calls eplan_test]
-       Check EPLAN for MessageBox
-
-User: Close the project
-Claude: [calls eplan_close_project]
-       Executed: XPrjActionProjectClose
-```
-
-## Troubleshooting
-
-### "EPLAN not found in Program Files"
-Ensure EPLAN is installed in the default location. If installed elsewhere, update the paths in `eplan_connection.py`.
-
-### "pythonnet not installed"
-Run: `pip install pythonnet`
-
-### "Not connected"
-Make sure EPLAN is running before calling `eplan_connect`.
-
-### Connection timeout
-EPLAN must be fully loaded (not just starting up). Wait until the EPLAN interface is responsive.
+See [`../../llm.md`](../../llm.md) for an operating guide aimed at the connected LLM.
