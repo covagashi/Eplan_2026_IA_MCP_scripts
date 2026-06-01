@@ -8,12 +8,31 @@ from ._base import _get_connected_manager, _build_action
 
 
 def export_connections(
-    export_file: str,
-    project_name: str = None
+    destination: str,
+    project_name: str = None,
+    config_scheme: str = None,
+    language: str = None,
+    complete_project: bool = False,
+    execution_mode: int = 0,
+    immediate_import: bool = False,
+    include_graphical_connections: bool = False
 ) -> dict:
     """
-    Export connections from project.
+    Export connections of a project (for external editing).
+    Note: Provided for backward compatibility; prefer dc_export
+    (XMActionDCCommonExport) for new implementations.
     Action: XMExportConnectionsAction
+
+    Args:
+        destination: Target file (TXT, XLSX, XML; format per ConfigScheme
+                     extension) (parameter Destination).
+        project_name: Project path (parameter ProjectName).
+        config_scheme: Configuration scheme (parameter ConfigScheme).
+        language: Language code, e.g. "en_US" (parameter Language).
+        complete_project: Export all connections, not only selected ones.
+        execution_mode: 0=Export, 1=Export and edit, 2=Edit and return.
+        immediate_import: Auto-import after edit (only for execution_mode 2).
+        include_graphical_connections: Include graphical connections.
     """
     manager, error = _get_connected_manager()
     if error:
@@ -21,19 +40,40 @@ def export_connections(
 
     action = _build_action(
         "XMExportConnectionsAction",
-        PROJECTNAME=project_name,
-        EXPORTFILE=export_file
+        ProjectName=project_name,
+        Destination=destination,
+        ConfigScheme=config_scheme,
+        Language=language,
+        CompleteProject=complete_project,
+        ExecutionMode=execution_mode,
+        ImmediateImport=immediate_import,
+        IncludeGraphicalConnections=include_graphical_connections
     )
     return manager.execute_action(action)
 
 
 def export_functions(
-    export_file: str,
-    project_name: str = None
+    destination: str,
+    project_name: str = None,
+    config_scheme: str = None,
+    language: str = None,
+    complete_project: bool = False,
+    execution_mode: int = 0,
+    immediate_import: bool = False
 ) -> dict:
     """
-    Export functions from project.
+    Export functions of a project (for external editing).
+    Note: Prefer dc_export (XMActionDCCommonExport) for new implementations.
     Action: XMExportFunctionAction
+
+    Args:
+        destination: Target file (TXT, XLSX, XML) (parameter Destination).
+        project_name: Project path (parameter ProjectName).
+        config_scheme: Configuration scheme (parameter ConfigScheme).
+        language: Language code (parameter Language).
+        complete_project: Export all functions, not only selected ones.
+        execution_mode: 0=Export, 1=Export and edit, 2=Edit and return.
+        immediate_import: Auto-import after edit (only for execution_mode 2).
     """
     manager, error = _get_connected_manager()
     if error:
@@ -41,19 +81,39 @@ def export_functions(
 
     action = _build_action(
         "XMExportFunctionAction",
-        PROJECTNAME=project_name,
-        EXPORTFILE=export_file
+        ProjectName=project_name,
+        Destination=destination,
+        ConfigScheme=config_scheme,
+        Language=language,
+        CompleteProject=complete_project,
+        ExecutionMode=execution_mode,
+        ImmediateImport=immediate_import
     )
     return manager.execute_action(action)
 
 
 def export_pages(
-    export_file: str,
-    project_name: str = None
+    destination: str,
+    project_name: str = None,
+    config_scheme: str = None,
+    language: str = None,
+    complete_project: bool = False,
+    execution_mode: int = 0,
+    immediate_import: bool = False
 ) -> dict:
     """
-    Export pages from project.
+    Export pages of a project (for external editing).
+    Note: Prefer dc_export (XMActionDCCommonExport) for new implementations.
     Action: XMExportPagesAction
+
+    Args:
+        destination: Target file (TXT, XLSX, XML) (parameter Destination).
+        project_name: Project path (parameter ProjectName).
+        config_scheme: Configuration scheme (parameter ConfigScheme).
+        language: Language code (parameter Language).
+        complete_project: Export all pages, not only selected ones.
+        execution_mode: 0=Export, 1=Export and edit, 2=Edit and return.
+        immediate_import: Auto-import after edit (only for execution_mode 2).
     """
     manager, error = _get_connected_manager()
     if error:
@@ -61,19 +121,32 @@ def export_pages(
 
     action = _build_action(
         "XMExportPagesAction",
-        PROJECTNAME=project_name,
-        EXPORTFILE=export_file
+        ProjectName=project_name,
+        Destination=destination,
+        ConfigScheme=config_scheme,
+        Language=language,
+        CompleteProject=complete_project,
+        ExecutionMode=execution_mode,
+        ImmediateImport=immediate_import
     )
     return manager.execute_action(action)
 
 
 def dc_import(
     import_file: str,
-    project_name: str = None
+    project_name: str = None,
+    progress_title: str = None
 ) -> dict:
     """
-    Import data configuration file into project.
+    Import a data configuration file into an existing EPLAN project.
+    This allows the properties of functions to be changed.
     Action: XMActionDCImport
+
+    Args:
+        import_file: Path of the data configuration (.edc) file
+                     (parameter DataConfigurationFile).
+        project_name: Project path (parameter ProjectLink).
+        progress_title: Optional progress title (parameter ProgressTitle).
     """
     manager, error = _get_connected_manager()
     if error:
@@ -81,19 +154,37 @@ def dc_import(
 
     action = _build_action(
         "XMActionDCImport",
-        PROJECTNAME=project_name,
-        IMPORTFILE=import_file
+        ProjectLink=project_name,
+        DataConfigurationFile=import_file,
+        ProgressTitle=progress_title
     )
     return manager.execute_action(action)
 
 
 def dc_export(
-    export_file: str,
-    project_name: str = None
+    destination: str,
+    project_name: str = None,
+    config_scheme: str = None,
+    language: str = None,
+    complete_project: bool = False,
+    execution_mode: int = 0,
+    immediate_import: bool = False
 ) -> dict:
     """
-    Export data configuration from project.
+    Export project data configuration for external editing.
+    This is the recommended action for connections/functions/pages/etc. export.
     Action: XMActionDCCommonExport
+
+    Args:
+        destination: Target file (TXT, XLSX, XML; format per CONFIGSCHEME
+                     extension) (parameter DESTINATION).
+        project_name: Project path (parameter PROJECTNAME).
+        config_scheme: Configuration scheme (parameter CONFIGSCHEME). If not set,
+                       a dialog asks for it.
+        language: Language code, e.g. "en_US" or "??_??" for all (parameter LANGUAGE).
+        complete_project: Export the whole project, not only selected objects.
+        execution_mode: 0=Export, 1=Export and edit, 2=Edit and return.
+        immediate_import: Auto-import after edit (only for execution_mode 2).
     """
     manager, error = _get_connected_manager()
     if error:
@@ -102,7 +193,12 @@ def dc_export(
     action = _build_action(
         "XMActionDCCommonExport",
         PROJECTNAME=project_name,
-        EXPORTFILE=export_file
+        DESTINATION=destination,
+        CONFIGSCHEME=config_scheme,
+        LANGUAGE=language,
+        COMPLETEPROJECT=complete_project,
+        EXECUTIONMODE=execution_mode,
+        IMMEDIATEIMPORT=immediate_import
     )
     return manager.execute_action(action)
 
@@ -337,12 +433,24 @@ def unite_net_definition_points() -> dict:
 
 
 def export_subproject(
-    export_file: str,
-    project_name: str = None
+    destination_path: str = None,
+    project_name: str = None,
+    subproject_number: str = None,
+    extend_only: bool = None
 ) -> dict:
     """
-    Export subproject.
-    Action: subprojects
+    Export (split off) a subproject.
+    Action: subprojects (TYPE=FILEOFF)
+
+    Note: The project must be opened in exclusive mode. After this action the
+    source project object becomes invalid.
+
+    Args:
+        destination_path: Target directory (parameter DESTINATIONPATH).
+                          Default is "$(MD_PROJECTS)".
+        project_name: Project path (parameter PROJECTNAME).
+        subproject_number: Subproject number (parameter SPNR).
+        extend_only: Extend subproject only (parameter EXTENDONLY).
     """
     manager, error = _get_connected_manager()
     if error:
@@ -350,20 +458,32 @@ def export_subproject(
 
     action = _build_action(
         "subprojects",
-        TYPE="EXPORT",
+        TYPE="FILEOFF",
         PROJECTNAME=project_name,
-        EXPORTFILE=export_file
+        DESTINATIONPATH=destination_path,
+        SPNR=subproject_number,
+        EXTENDONLY=extend_only
     )
     return manager.execute_action(action)
 
 
 def import_subproject(
-    import_file: str,
-    project_name: str = None
+    project_name: str = None,
+    subproject_number: str = None,
+    subproject_dir: str = None
 ) -> dict:
     """
-    Import subproject.
-    Action: subprojects
+    Import (store back) a subproject.
+    Action: subprojects (TYPE=STORE)
+
+    Note: The project must be opened in exclusive mode.
+
+    Args:
+        project_name: Project path (parameter PROJECTNAME).
+        subproject_number: Subproject number (parameter SPNR).
+        subproject_dir: Directory where the subproject is placed
+                        (parameter SUBPROJECTDIR, STORE only). Default is
+                        taken from the alias.
     """
     manager, error = _get_connected_manager()
     if error:
@@ -371,9 +491,10 @@ def import_subproject(
 
     action = _build_action(
         "subprojects",
-        TYPE="IMPORT",
+        TYPE="STORE",
         PROJECTNAME=project_name,
-        IMPORTFILE=import_file
+        SPNR=subproject_number,
+        SUBPROJECTDIR=subproject_dir
     )
     return manager.execute_action(action)
 

@@ -14,13 +14,19 @@ import uuid
 from typing import List
 from ._base import _get_connected_manager
 
-# Directory for generated scripts and results
-SCRIPT_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "generated"
-)
-RESULTS_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "results"
-)
+# Locate the mcp_server root (the directory containing eplan_connection.py) so
+# that generated scripts and results share a single location with
+# eplan_connection.py's QuietMode wrapper, instead of a per-API-version folder.
+_MCP_ROOT = os.path.dirname(os.path.abspath(__file__))
+while not os.path.exists(os.path.join(_MCP_ROOT, "eplan_connection.py")):
+    _parent = os.path.dirname(_MCP_ROOT)
+    if _parent == _MCP_ROOT:
+        break
+    _MCP_ROOT = _parent
+
+# Directory for generated scripts and results (shared, under mcp_server/scripts)
+SCRIPT_DIR = os.path.join(_MCP_ROOT, "scripts", "generated")
+RESULTS_DIR = os.path.join(_MCP_ROOT, "scripts", "results")
 
 
 def _ensure_dirs():

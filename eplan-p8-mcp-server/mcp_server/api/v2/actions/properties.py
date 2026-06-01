@@ -7,14 +7,18 @@ from typing import Optional
 from ._base import _get_connected_manager, _build_action
 
 
-def get_project_property(property_id: str, project_name: str = None) -> dict:
+def get_project_property(property_id: str, property_index: int = 0) -> dict:
     """
-    Get a property value from the project.
+    Get a special property of the current project.
     Action: XEsGetProjectPropertyAction
 
+    Note: This action operates on the CURRENT project (no PROJECTNAME parameter).
+    The value is returned in the calling-context parameter "PropertyValue".
+
     Args:
-        property_id: Property identifier (number or name)
-        project_name: Project path (optional)
+        property_id: Property identifier name or number (parameter PropertyId).
+                     Values defined in Eplan.EplApi.DataModel.Properties.
+        property_index: Property index (default 0, parameter PropertyIndex).
     """
     manager, error = _get_connected_manager()
     if error:
@@ -22,21 +26,23 @@ def get_project_property(property_id: str, project_name: str = None) -> dict:
 
     action = _build_action(
         "XEsGetProjectPropertyAction",
-        PROJECTNAME=project_name,
-        PROPERTYID=property_id
+        PropertyId=property_id,
+        PropertyIndex=property_index
     )
     return manager.execute_action(action)
 
 
-def set_project_property(property_id: str, value: str, project_name: str = None) -> dict:
+def set_project_property(property_id: str, value: str, property_index: int = 0) -> dict:
     """
-    Set a property value on the project.
+    Set a special property of the current project.
     Action: XEsSetProjectPropertyAction
 
+    Note: This action operates on the CURRENT project (no PROJECTNAME parameter).
+
     Args:
-        property_id: Property identifier (number or name)
-        value: Value to set
-        project_name: Project path (optional)
+        property_id: Property identifier name or number (parameter PropertyId).
+        value: Value to set (parameter PropertyValue).
+        property_index: Property index (default 0, parameter PropertyIndex).
     """
     manager, error = _get_connected_manager()
     if error:
@@ -44,21 +50,24 @@ def set_project_property(property_id: str, value: str, project_name: str = None)
 
     action = _build_action(
         "XEsSetProjectPropertyAction",
-        PROJECTNAME=project_name,
-        PROPERTYID=property_id,
-        VALUE=value
+        PropertyId=property_id,
+        PropertyIndex=property_index,
+        PropertyValue=value
     )
     return manager.execute_action(action)
 
 
-def get_page_property(property_id: str, page_name: str = None) -> dict:
+def get_page_property(property_id: str, property_index: int = 0) -> dict:
     """
-    Get a property value from the first selected page.
+    Get a special property of the first selected page.
     Action: XEsGetPagePropertyAction
 
+    Note: This action operates on the first SELECTED page (no PAGENAME parameter).
+    The value is returned in the calling-context parameter "PropertyValue".
+
     Args:
-        property_id: Property identifier (number or name)
-        page_name: Page name (optional, uses selected page if not set)
+        property_id: Property identifier name or number (parameter PropertyId).
+        property_index: Property index (default 0, parameter PropertyIndex).
     """
     manager, error = _get_connected_manager()
     if error:
@@ -66,21 +75,23 @@ def get_page_property(property_id: str, page_name: str = None) -> dict:
 
     action = _build_action(
         "XEsGetPagePropertyAction",
-        PAGENAME=page_name,
-        PROPERTYID=property_id
+        PropertyId=property_id,
+        PropertyIndex=property_index
     )
     return manager.execute_action(action)
 
 
-def set_page_property(property_id: str, value: str, page_name: str = None) -> dict:
+def set_page_property(property_id: str, value: str, property_index: int = 0) -> dict:
     """
-    Set a property value on selected pages.
+    Set a special property of the selected pages.
     Action: XEsSetPagePropertyAction
 
+    Note: This action operates on the SELECTED pages (no PAGENAME parameter).
+
     Args:
-        property_id: Property identifier (number or name)
-        value: Value to set
-        page_name: Page name (optional, uses selected pages if not set)
+        property_id: Property identifier name or number (parameter PropertyId).
+        value: Value to set (parameter PropertyValue).
+        property_index: Property index (default 0, parameter PropertyIndex).
     """
     manager, error = _get_connected_manager()
     if error:
@@ -88,9 +99,9 @@ def set_page_property(property_id: str, value: str, page_name: str = None) -> di
 
     action = _build_action(
         "XEsSetPagePropertyAction",
-        PAGENAME=page_name,
-        PROPERTYID=property_id,
-        VALUE=value
+        PropertyId=property_id,
+        PropertyIndex=property_index,
+        PropertyValue=value
     )
     return manager.execute_action(action)
 

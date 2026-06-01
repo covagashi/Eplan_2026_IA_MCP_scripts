@@ -43,10 +43,18 @@ def prepare_macros(project_name: str = None) -> dict:
     return manager.execute_action(action)
 
 
-def update_macros(project_path: str = None) -> dict:
+def update_macros(project_path: str = None, scheme_name: str = None) -> dict:
     """
     Update macros in project.
     Action: XGedUpdateMacroAction
+
+    Args:
+        project_path: Full path of the project (parameter ProjectName).
+                      If the project is not open, the action opens and closes
+                      it automatically. If omitted, the selected object in GED
+                      is used.
+        scheme_name: Concrete scheme to use (optional, parameter SchemeName).
+                     If not given, the last used scheme is used.
     """
     manager, error = _get_connected_manager()
     if error:
@@ -54,6 +62,7 @@ def update_macros(project_path: str = None) -> dict:
 
     action = _build_action(
         "XGedUpdateMacroAction",
-        PROJECTPATH=project_path
+        ProjectName=project_path,
+        SchemeName=scheme_name
     )
     return manager.execute_action(action)

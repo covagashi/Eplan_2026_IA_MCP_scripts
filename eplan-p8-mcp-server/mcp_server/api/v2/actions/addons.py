@@ -9,6 +9,11 @@ def load_api_module(module_path: str) -> dict:
     """
     Load and register an API add-in.
     Action: EplApiModuleAction
+
+    Args:
+        module_path: File name of the Add-in DLL to register (parameter register).
+                     If no absolute path is given, it is resolved against the
+                     current directory.
     """
     manager, error = _get_connected_manager()
     if error:
@@ -16,15 +21,21 @@ def load_api_module(module_path: str) -> dict:
 
     action = _build_action(
         "EplApiModuleAction",
-        MODULEPATH=module_path
+        register=module_path
     )
     return manager.execute_action(action)
 
 
-def register_addon(addon_path: str) -> dict:
+def register_addon(addon_path: str = None, install_file: str = None) -> dict:
     """
     Register an add-on.
     Action: XSettingsRegisterAction
+
+    Args:
+        addon_path: Path where the add-on is located, e.g. "..\\addon\\1.0.0"
+                    (parameter path). Alternative to install_file.
+        install_file: Complete path of the install.xml file (parameter installFile).
+                      Alternative to addon_path.
     """
     manager, error = _get_connected_manager()
     if error:
@@ -32,15 +43,22 @@ def register_addon(addon_path: str) -> dict:
 
     action = _build_action(
         "XSettingsRegisterAction",
-        ADDONPATH=addon_path
+        path=addon_path,
+        installFile=install_file
     )
     return manager.execute_action(action)
 
 
-def unregister_addon(addon_path: str) -> dict:
+def unregister_addon(addon_path: str = None, install_file: str = None) -> dict:
     """
     Unregister an add-on.
     Action: XSettingsUnregisterAction
+
+    Args:
+        addon_path: Path where the add-on is located (parameter path).
+                    Alternative to install_file.
+        install_file: Complete path of the install.xml file (parameter installFile).
+                      Alternative to addon_path.
     """
     manager, error = _get_connected_manager()
     if error:
@@ -48,7 +66,8 @@ def unregister_addon(addon_path: str) -> dict:
 
     action = _build_action(
         "XSettingsUnregisterAction",
-        ADDONPATH=addon_path
+        path=addon_path,
+        installFile=install_file
     )
     return manager.execute_action(action)
 

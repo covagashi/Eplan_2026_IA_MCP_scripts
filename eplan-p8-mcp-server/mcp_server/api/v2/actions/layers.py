@@ -8,12 +8,25 @@ from ._base import _get_connected_manager, _build_action
 def change_layer(
     layer_name: str = None,
     visible: bool = None,
-    printable: bool = None,
-    editable: bool = None
+    printed: bool = None,
+    text_height: float = None,
+    color_id: int = None,
+    transparency: float = None,
+    project_name: str = None
 ) -> dict:
     """
     Change graphical layer properties.
     Action: changelayer
+
+    Args:
+        layer_name: Name of the layer (parameter LAYER).
+        visible: Whether the layer is visible (parameter VISIBLE).
+        printed: Whether the layer is printed (parameter PRINTED).
+        text_height: Text height of the layer (parameter TEXTHEIGHT).
+        color_id: Color ID of the layer (parameter COLORID).
+        transparency: Transparency of the layer (parameter TRANSPARENCY).
+        project_name: Project path (optional). If omitted, the selected
+                      project is used.
     """
     manager, error = _get_connected_manager()
     if error:
@@ -21,10 +34,13 @@ def change_layer(
 
     action = _build_action(
         "changelayer",
-        LAYERNAME=layer_name,
+        PROJECTNAME=project_name,
+        LAYER=layer_name,
         VISIBLE=visible,
-        PRINTABLE=printable,
-        EDITABLE=editable
+        PRINTED=printed,
+        TEXTHEIGHT=text_height,
+        COLORID=color_id,
+        TRANSPARENCY=transparency
     )
     return manager.execute_action(action)
 

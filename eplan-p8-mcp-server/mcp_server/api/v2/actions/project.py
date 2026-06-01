@@ -135,6 +135,9 @@ def get_current_project() -> dict:
     """
     Get the current project path.
     Action: selectionset
+
+    The result is returned in the calling context parameter "PROJECT"
+    (full project path with .elk extension).
     """
     manager, error = _get_connected_manager()
     if error:
@@ -142,7 +145,7 @@ def get_current_project() -> dict:
 
     action = _build_action(
         "selectionset",
-        TYPE="CURRENTPROJECT"
+        TYPE="PROJECT"
     )
     return manager.execute_action(action)
 
