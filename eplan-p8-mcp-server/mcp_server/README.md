@@ -80,7 +80,7 @@ eplan-p8-mcp-server/mcp_server/
 
 ## Requirements
 
-- **EPLAN Electric P8** installed (2024, 2025, or 2026)
+- **EPLAN Electric P8** installed (2024, 2025, 2026, or 2027)
 - **Python 3.10+** (64-bit, to match EPLAN's process)
 - Dependencies: `pip install -r requirements.txt` (`pythonnet`, `mcp`)
 
@@ -214,13 +214,13 @@ Tips:
 
 ## Changing the target EPLAN version
 
-The version (e.g. `"2025"` → `"2026"`) is set in **4 files** — update all:
+The version (e.g. `"2026"` → `"2027"`) is set in **4 files** — update all:
 
 | File | What to change |
 |------|----------------|
-| `server.py` | `TARGET_VERSION = "2025"` |
-| `api/v1/actions/_base.py` | `TARGET_VERSION = "2025"` |
-| `api/v2/actions/_base.py` | `TARGET_VERSION = "2025"` |
+| `server.py` | `TARGET_VERSION = "2027"` |
+| `api/v1/actions/_base.py` | `TARGET_VERSION = "2027"` |
+| `api/v2/actions/_base.py` | `TARGET_VERSION = "2027"` |
 | `eplan_connection.py` | default `target_version` in `__init__` and `get_manager` |
 
 ---
