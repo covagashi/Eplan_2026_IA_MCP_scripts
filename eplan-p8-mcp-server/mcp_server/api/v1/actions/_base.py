@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from eplan_connection import get_manager
 
-TARGET_VERSION = "2025"
+TARGET_VERSION = "2027"
 
 
 def _get_connected_manager():

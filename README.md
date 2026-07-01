@@ -128,13 +128,13 @@ The new tool becomes available after restarting Claude / the server.
 
 ## Changing EPLAN Version
 
-The target EPLAN version is configured in **4 files**. Update all of them when switching versions (e.g. `"2025"` → `"2026"`):
+The target EPLAN version is configured in **4 files**. Update all of them when switching versions (e.g. `"2026"` → `"2027"`):
 
 | File | What to change |
 |------|----------------|
-| `eplan-p8-mcp-server/mcp_server/server.py` | `TARGET_VERSION = "2025"` |
-| `eplan-p8-mcp-server/mcp_server/api/v1/actions/_base.py` | `TARGET_VERSION = "2025"` |
-| `eplan-p8-mcp-server/mcp_server/api/v2/actions/_base.py` | `TARGET_VERSION = "2025"` |
+| `eplan-p8-mcp-server/mcp_server/server.py` | `TARGET_VERSION = "2027"` |
+| `eplan-p8-mcp-server/mcp_server/api/v1/actions/_base.py` | `TARGET_VERSION = "2027"` |
+| `eplan-p8-mcp-server/mcp_server/api/v2/actions/_base.py` | `TARGET_VERSION = "2027"` |
 | `eplan-p8-mcp-server/mcp_server/eplan_connection.py` | default `target_version` in `__init__` and `get_manager` |
 
 ## Resources

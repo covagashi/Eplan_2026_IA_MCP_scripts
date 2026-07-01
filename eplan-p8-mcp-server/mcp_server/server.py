@@ -16,7 +16,7 @@ import functools
 from mcp.server.fastmcp import FastMCP
 from eplan_connection import get_manager
 
-TARGET_VERSION = "2025"
+TARGET_VERSION = "2027"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 mcp = FastMCP("EPLAN MCP Server")
