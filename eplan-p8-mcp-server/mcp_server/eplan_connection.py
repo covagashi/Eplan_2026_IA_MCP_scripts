@@ -19,6 +19,36 @@ from typing import Optional, List
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("EPLAN")
 
+# Select the pythonnet runtime before the first `import clr`.
+# EPLAN 2027+ targets .NET 8 (net8.0) and requires coreclr.
+# EPLAN 2026 and older are .NET Framework and use the default netfx runtime.
+# Detection heuristic: presence of Grpc.Net.Client.dll (a .NET 8-only assembly)
+# in the EPLAN Bin signals a .NET 8 build.
+def _select_dotnet_runtime() -> None:
+    _candidate_bins = [
+        rf"C:\Program Files\EPLAN\Platform\{v}\Bin"
+        for v in ["2027.0.1", "2027.0.3", "2027.0", "2026.0.3", "2026.0.1", "2026.0",
+                  "2025.0.3", "2025.0", "2024.0", "2023.0.3", "2023.0"]
+    ]
+    runtime = "default"
+    for _bin in _candidate_bins:
+        if os.path.exists(os.path.join(_bin, "Grpc.Net.Client.dll")):
+            runtime = "coreclr"
+            break
+        if os.path.exists(_bin):
+            break  # Found an EPLAN install that is NOT .NET 8 — stop looking
+    try:
+        from pythonnet import load as _pnet_load
+        if runtime == "coreclr":
+            _pnet_load("coreclr")
+            logger.info("pythonnet: coreclr (.NET 8) runtime selected (EPLAN 2027+)")
+        else:
+            logger.info("pythonnet: using default runtime (EPLAN 2026 or older)")
+    except Exception as _pnet_err:
+        logger.warning(f"pythonnet: runtime selection failed ({_pnet_err})")
+
+_select_dotnet_runtime()
+
 
 class EPLANConnectionManager:
     """Manages the connection to EPLAN via Remote Client API."""
@@ -27,7 +57,7 @@ class EPLANConnectionManager:
     DEFAULT_HOST = "localhost"
     TIMEOUT_SECONDS = 10
 
-    def __init__(self, target_version: str = "2026"):
+    def __init__(self, target_version: str = "2027"):
         self.target_version = target_version
         self.client = None
         self.connected = False
@@ -45,6 +75,7 @@ class EPLANConnectionManager:
             paths = [
                 rf"C:\Program Files\EPLAN\Platform\{self.target_version}.0\Bin",
                 rf"C:\Program Files\EPLAN\Platform\{self.target_version}.0.3\Bin",
+                rf"C:\Program Files\EPLAN\Platform\{self.target_version}.0.1\Bin",
                 r"C:\Program Files\EPLAN\Platform\2025.0\Bin",
                 r"C:\Program Files\EPLAN\Platform\2025.0.3\Bin",
                 r"C:\Program Files\EPLAN\Platform\2024.0\Bin",
@@ -75,6 +106,26 @@ class EPLANConnectionManager:
                 if os.path.exists(dp) and dp not in sys.path:
                     sys.path.append(dp)
 
+            # Load EPLAN DLLs via LoadFrom so .NET probes the EPLAN Bin directory
+            # for dependencies (e.g. Grpc.Core), preventing version conflicts with
+            # any system-wide or Python-env assembly of the same name.
+            import System.Reflection
+            import System
+
+            def _resolve_from_eplan(sender, args):
+                asm_name = System.Reflection.AssemblyName(args.Name).Name
+                candidate = os.path.join(eplan_path, asm_name + ".dll")
+                if os.path.exists(candidate):
+                    return System.Reflection.Assembly.LoadFrom(candidate)
+                return None
+
+            System.AppDomain.CurrentDomain.AssemblyResolve += _resolve_from_eplan
+
+            for dll in ("Eplan.EplApi.Starteru.dll", "Eplan.EplApi.RemoteClientu.dll", "Eplan.EplApi.Remotingu.dll"):
+                dll_path = os.path.join(eplan_path, dll)
+                if os.path.exists(dll_path):
+                    System.Reflection.Assembly.LoadFrom(dll_path)
+
             clr.AddReference("Eplan.EplApi.Starteru")
             clr.AddReference("Eplan.EplApi.RemoteClientu")
             clr.AddReference("Eplan.EplApi.Remotingu")
@@ -93,6 +144,8 @@ class EPLANConnectionManager:
 
     def get_active_servers(self) -> list:
         """Get active EPLAN servers on the local machine."""
+        if not self._clr_initialized:
+            self._clr_initialized = self._setup_api()
         if not self._clr_initialized:
             return []
 
@@ -124,6 +177,8 @@ class EPLANConnectionManager:
 
     def connect(self, host: str = None, port: str = None) -> dict:
         """Connect to an EPLAN instance."""
+        if not self._clr_initialized:
+            self._clr_initialized = self._setup_api()
         if not self._clr_initialized:
             return {"success": False, "message": self.last_error}
 
@@ -366,8 +421,8 @@ public class QuietExecute_{exec_id}
 _manager: Optional[EPLANConnectionManager] = None
 
 
-def get_manager(target_version: str = "2026") -> EPLANConnectionManager:
+def get_manager(target_version: str = "2027") -> EPLANConnectionManager:
     global _manager
-    if _manager is None:
+    if _manager is None or not _manager._clr_initialized:
         _manager = EPLANConnectionManager(target_version)
     return _manager
