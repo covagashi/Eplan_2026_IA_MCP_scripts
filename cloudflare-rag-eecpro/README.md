@@ -19,7 +19,7 @@ Claude Code  -->  MCP (Streamable HTTP)  -->  Cloudflare Worker (eecpro-rag-mcp)
 
 ## Source Data
 
-- **Local ChromaDB:** `../eplan-eecpro-rag-builder/rag_db_llama_chroma/`
+- **Local ChromaDB:** `eplan-eecpro-rag-builder/rag_db_llama_chroma/` (builder removed from this repo; the index is already deployed to Vectorize)
 - **Documents:** 1,648 markdown pages across 36 categories
 - **Indexed with:** LlamaIndex (MarkdownNodeParser + SentenceSplitter)
 - **Embedding model:** BAAI/bge-base-en-v1.5

@@ -19,24 +19,44 @@ from typing import Optional, List
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("EPLAN")
 
-# Select the pythonnet runtime before the first `import clr`.
-# EPLAN 2027+ targets .NET 8 (net8.0) and requires coreclr.
-# EPLAN 2026 and older are .NET Framework and use the default netfx runtime.
-# Detection heuristic: presence of Grpc.Net.Client.dll (a .NET 8-only assembly)
-# in the EPLAN Bin signals a .NET 8 build.
-def _select_dotnet_runtime() -> None:
-    _candidate_bins = [
-        rf"C:\Program Files\EPLAN\Platform\{v}\Bin"
-        for v in ["2027.0.1", "2027.0.3", "2027.0", "2026.0.3", "2026.0.1", "2026.0",
-                  "2025.0.3", "2025.0", "2024.0", "2023.0.3", "2023.0"]
-    ]
-    runtime = "default"
-    for _bin in _candidate_bins:
-        if os.path.exists(os.path.join(_bin, "Grpc.Net.Client.dll")):
-            runtime = "coreclr"
-            break
-        if os.path.exists(_bin):
-            break  # Found an EPLAN install that is NOT .NET 8 — stop looking
+# Root folder of EPLAN installations. Override with the EPLAN_PLATFORM_ROOT
+# environment variable for non-standard install locations.
+PLATFORM_ROOT = os.environ.get("EPLAN_PLATFORM_ROOT", r"C:\Program Files\EPLAN\Platform")
+
+
+def _version_key(name: str):
+    return tuple(int(p) for p in name.split(".") if p.isdigit())
+
+
+def detect_installed_versions() -> list:
+    """Detect EPLAN installations under PLATFORM_ROOT.
+
+    Returns a list of dicts sorted newest-first, one per major version:
+    [{"version": "2027", "full_version": "2027.0.3", "bin": "...", "runtime": "coreclr"}]
+
+    runtime: "coreclr" for .NET 8 builds (EPLAN 2027+, detected via the
+    .NET 8-only Grpc.Net.Client.dll), "netfx" for 2026 and older.
+    """
+    installs = {}
+    try:
+        for name in os.listdir(PLATFORM_ROOT):
+            bin_dir = os.path.join(PLATFORM_ROOT, name, "Bin")
+            if not os.path.exists(os.path.join(bin_dir, "Eplan.EplApi.RemoteClientu.dll")):
+                continue
+            major = name.split(".")[0]
+            runtime = "coreclr" if os.path.exists(os.path.join(bin_dir, "Grpc.Net.Client.dll")) else "netfx"
+            entry = {"version": major, "full_version": name, "bin": bin_dir, "runtime": runtime}
+            if major not in installs or _version_key(name) > _version_key(installs[major]["full_version"]):
+                installs[major] = entry
+    except FileNotFoundError:
+        pass
+    return sorted(installs.values(), key=lambda e: _version_key(e["full_version"]), reverse=True)
+
+
+def _select_dotnet_runtime(runtime: str) -> None:
+    """Select the pythonnet runtime. Must run before the first `import clr`
+    and can only happen once per process — switching afterwards requires
+    restarting the MCP server."""
     try:
         from pythonnet import load as _pnet_load
         if runtime == "coreclr":
@@ -47,8 +67,6 @@ def _select_dotnet_runtime() -> None:
     except Exception as _pnet_err:
         logger.warning(f"pythonnet: runtime selection failed ({_pnet_err})")
 
-_select_dotnet_runtime()
-
 
 class EPLANConnectionManager:
     """Manages the connection to EPLAN via Remote Client API."""
@@ -57,42 +75,44 @@ class EPLANConnectionManager:
     DEFAULT_HOST = "localhost"
     TIMEOUT_SECONDS = 10
 
-    def __init__(self, target_version: str = "2027"):
-        self.target_version = target_version
+    def __init__(self, target_version: str = None):
+        # target_version: EPLAN major version like "2026".
+        # None = auto-detect (newest installed version).
+        self.target_version = str(target_version) if target_version else None
         self.client = None
         self.connected = False
         self.port = self.DEFAULT_PORT
         self.last_error = ""
-        self._clr_initialized = self._setup_api()
+        # Lazy: DLLs load on first use so tools like eplan_versions can run
+        # without committing this process to one version's .NET runtime.
+        self._clr_initialized = False
 
     def _setup_api(self) -> bool:
         """Load EPLAN DLLs via pythonnet."""
         try:
-            import clr
-
-            # Search for EPLAN installation
-            # Target version paths first, then fallbacks
-            paths = [
-                rf"C:\Program Files\EPLAN\Platform\{self.target_version}.0\Bin",
-                rf"C:\Program Files\EPLAN\Platform\{self.target_version}.0.3\Bin",
-                rf"C:\Program Files\EPLAN\Platform\{self.target_version}.0.1\Bin",
-                r"C:\Program Files\EPLAN\Platform\2025.0\Bin",
-                r"C:\Program Files\EPLAN\Platform\2025.0.3\Bin",
-                r"C:\Program Files\EPLAN\Platform\2024.0\Bin",
-                r"C:\Program Files\EPLAN\Platform\2023.0.3\Bin",
-                r"C:\Program Files\EPLAN\Platform\2023.0\Bin",
-            ]
-
-            eplan_path = None
-            for p in paths:
-                if os.path.exists(p):
-                    eplan_path = p
-                    break
-
-            if not eplan_path:
-                self.last_error = "EPLAN not found in Program Files"
+            installs = detect_installed_versions()
+            if not installs:
+                self.last_error = f"No EPLAN installation found under {PLATFORM_ROOT}"
                 logger.error(self.last_error)
                 return False
+
+            if self.target_version:
+                chosen = next((i for i in installs if i["version"] == self.target_version), None)
+                if chosen is None:
+                    available = ", ".join(i["version"] for i in installs)
+                    self.last_error = f"EPLAN {self.target_version} not installed (available: {available})"
+                    logger.error(self.last_error)
+                    return False
+            else:
+                chosen = installs[0]
+                logger.info(f"Auto-detected EPLAN {chosen['full_version']} (newest installed)")
+
+            self.target_version = chosen["version"]
+            _select_dotnet_runtime(chosen["runtime"])
+
+            import clr
+
+            eplan_path = chosen["bin"]
 
             if eplan_path not in sys.path:
                 sys.path.append(eplan_path)
@@ -412,6 +432,7 @@ public class QuietExecute_{exec_id}
         return {
             "connected": self.connected,
             "api_loaded": self._clr_initialized,
+            "target_version": self.target_version,
             "port": self.port if self.connected else None,
             "last_error": self.last_error
         }
@@ -421,8 +442,23 @@ public class QuietExecute_{exec_id}
 _manager: Optional[EPLANConnectionManager] = None
 
 
-def get_manager(target_version: str = "2027") -> EPLANConnectionManager:
+def get_manager(target_version: str = None) -> EPLANConnectionManager:
+    """Return the singleton connection manager.
+
+    target_version: EPLAN major version like "2026". None = auto (newest
+    installed). Once the DLLs of one version are loaded into this process,
+    switching versions requires restarting the MCP server; a mismatching
+    request keeps the loaded version and logs a warning.
+    """
     global _manager
-    if _manager is None or not _manager._clr_initialized:
+    if _manager is None:
         _manager = EPLANConnectionManager(target_version)
+    elif target_version and str(target_version) != _manager.target_version:
+        if _manager._clr_initialized:
+            logger.warning(
+                f"EPLAN {_manager.target_version} DLLs already loaded; "
+                f"restart the MCP server to target {target_version}"
+            )
+        else:
+            _manager = EPLANConnectionManager(target_version)
     return _manager

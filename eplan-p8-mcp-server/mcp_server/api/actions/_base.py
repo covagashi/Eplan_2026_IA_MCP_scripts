@@ -1,6 +1,9 @@
 """
 Base utilities for EPLAN actions.
 Shared functions used by all action modules.
+
+Every action executes inside a C# script under QuietMode
+(QuietModes.ShowNoDialogs) so no EPLAN dialog can block unattended runs.
 """
 
 from typing import Optional
@@ -17,10 +20,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from eplan_connection import get_manager
 
-TARGET_VERSION = "2027"
 
-
-class V2ManagerWrapper:
+class QuietManagerWrapper:
     """Wrapper that forces execute_action to run with quiet_mode=True (via script)."""
     def __init__(self, manager):
         self.manager = manager
@@ -34,10 +35,10 @@ class V2ManagerWrapper:
 
 def _get_connected_manager():
     """Get the connection manager, ensuring it's connected."""
-    manager = get_manager(TARGET_VERSION)
+    manager = get_manager()
     if not manager.connected:
         return None, {"success": False, "message": "Not connected to EPLAN. Call eplan_connect() first."}
-    return V2ManagerWrapper(manager), None
+    return QuietManagerWrapper(manager), None
 
 
 def _build_action(action_name: str, **params) -> str:

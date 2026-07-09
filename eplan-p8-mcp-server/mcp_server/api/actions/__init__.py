@@ -284,7 +284,6 @@ from .scripted import (
 from ._base import (
     _get_connected_manager,
     _build_action,
-    TARGET_VERSION,
 )
 
 
@@ -375,5 +374,5 @@ __all__ = [
     # Scripted - Custom
     'execute_custom_script',
     # Base
-    '_get_connected_manager', '_build_action', 'TARGET_VERSION',
+    '_get_connected_manager', '_build_action',
 ]

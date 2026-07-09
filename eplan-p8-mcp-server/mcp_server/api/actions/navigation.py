@@ -91,6 +91,9 @@ def redraw_ged() -> dict:
     """
     Redraw the graphical editor.
     Action: gedRedraw
+
+    Note: This action only works interactively. Under QuietMode (which this
+    server always forces) the GED is not redrawn and the action returns FALSE.
     """
     manager, error = _get_connected_manager()
     if error:
@@ -103,6 +106,9 @@ def get_selected_pages() -> dict:
     """
     Get selected pages.
     Action: selectionset
+
+    The result is returned in the calling context parameter "PAGES"
+    (page names separated by ";", e.g. "=AP+ST1/1;=AP+ST1/2").
     """
     manager, error = _get_connected_manager()
     if error:
@@ -110,15 +116,29 @@ def get_selected_pages() -> dict:
 
     action = _build_action(
         "selectionset",
-        TYPE="SELECTEDPAGES"
+        TYPE="PAGES"
     )
     return manager.execute_action(action)
 
 
-def preview_page(page_name: str = None, project_name: str = None, open: bool = True) -> dict:
+def preview_page(
+    page_name: str = None,
+    project_name: str = None,
+    macro_name: str = None,
+    open: bool = True
+) -> dict:
     """
-    Open or close page preview.
+    Open or close the preview of a project page or macro.
     Action: XSDPreviewAction
+
+    Args:
+        page_name: Page name to preview (optional)
+        project_name: Project path (optional)
+        macro_name: Full path to a window/page macro (optional, with extension)
+        open: True to open the preview, False to close it (maps to SHOW=1/0)
+
+    Note: If both page_name and macro_name are empty, all project pages
+    are shown in the preview.
     """
     manager, error = _get_connected_manager()
     if error:
@@ -128,7 +148,8 @@ def preview_page(page_name: str = None, project_name: str = None, open: bool = T
         "XSDPreviewAction",
         PROJECTNAME=project_name,
         PAGENAME=page_name,
-        OPEN="1" if open else "0"
+        MACRONAME=macro_name,
+        SHOW="1" if open else "0"
     )
     return manager.execute_action(action)
 
@@ -137,6 +158,9 @@ def navigate_to_eec(object_id: str) -> dict:
     """
     Navigate to object in EPLAN Engineering Configuration.
     Action: navigateToEEC
+
+    Args:
+        object_id: Object ID in the EEC to navigate to (parameter EECOBJECTID).
     """
     manager, error = _get_connected_manager()
     if error:
@@ -144,6 +168,6 @@ def navigate_to_eec(object_id: str) -> dict:
 
     action = _build_action(
         "navigateToEEC",
-        OBJECTID=object_id
+        EECOBJECTID=object_id
     )
     return manager.execute_action(action)

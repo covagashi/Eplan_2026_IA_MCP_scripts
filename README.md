@@ -2,7 +2,7 @@
 
 A collection of AI-assisted automation tools for **EPLAN Electric P8** and **EPLAN EEC Pro 2026**, built around the Model Context Protocol (MCP).
 
-The repo contains four independent sub-projects: a local MCP server that drives EPLAN P8 directly, a documentation scraper / local RAG indexer for EEC Pro, and two remote MCP servers hosted on Cloudflare Workers that expose the indexed documentation via semantic search.
+The repo contains three independent sub-projects: a local MCP server that drives EPLAN P8 directly, and two remote MCP servers hosted on Cloudflare Workers that expose the indexed documentation via semantic search.
 
 > Working with an LLM here? Read [`llm.md`](llm.md) — it explains, in LLM-facing
 > terms, everything the toolkit can do and configure.
@@ -12,7 +12,6 @@ The repo contains four independent sub-projects: a local MCP server that drives 
 ```
 .
 ├── eplan-p8-mcp-server/          # LOCAL: MCP server that controls EPLAN P8
-├── eplan-eecpro-rag-builder/     # LOCAL: scraper + LlamaIndex/ChromaDB indexer for EEC Pro docs
 ├── cloudflare-rag-eplan-p8/      # REMOTE: Cloudflare Worker that serves the P8 docs RAG over MCP
 └── cloudflare-rag-eecpro/        # REMOTE: Cloudflare Worker that serves the EEC Pro docs RAG over MCP
 ```
@@ -20,7 +19,6 @@ The repo contains four independent sub-projects: a local MCP server that drives 
 | Folder | Type | Purpose | EPLAN product |
 |--------|------|---------|---------------|
 | `eplan-p8-mcp-server/` | Local Python MCP | Drive a running EPLAN instance from Claude (open/close projects, exports, reports, scripts, etc.) | EPLAN Electric P8 |
-| `eplan-eecpro-rag-builder/` | Local Python pipeline | Scrape official docs and build a local ChromaDB vector index | EPLAN EEC Pro 2026 |
 | `cloudflare-rag-eplan-p8/` | Remote Cloudflare Worker | Serve the P8 doc index as a remote MCP + REST API | EPLAN Electric P8 |
 | `cloudflare-rag-eecpro/` | Remote Cloudflare Worker | Serve the EEC Pro doc index as a remote MCP + REST API | EPLAN EEC Pro 2026 |
 
@@ -35,9 +33,13 @@ Each sub-project has its own README with installation and usage details.
 ### Local EPLAN automation (P8)
 
 The local MCP server lets Claude drive a running EPLAN instance. It exposes
-**304 tools**: 6 connection/utility tools plus **149 EPLAN actions in two
-flavours** — `eplan_v1_*` (direct execution) and `eplan_v2_*` (silent C# /
-QuietMode execution, recommended).
+**156 tools**: 7 connection/utility tools plus **149 EPLAN actions**
+(`eplan_*`), every one executed silently inside a C# script under QuietMode —
+no EPLAN dialog can block unattended runs.
+
+The EPLAN version is **auto-detected**: the server scans
+`C:\Program Files\EPLAN\Platform` and targets the newest installed version.
+No configuration needed.
 
 ```bash
 pip install pythonnet mcp
@@ -79,10 +81,6 @@ curl -X POST https://rag2026.covaga.xyz/search -H "Content-Type: application/jso
 
 See [`cloudflare-rag-eplan-p8/README.md`](cloudflare-rag-eplan-p8/README.md) and [`cloudflare-rag-eecpro/README.md`](cloudflare-rag-eecpro/README.md) for the tools, REST endpoints, and architecture.
 
-### Building the local EEC Pro RAG (optional)
-
-If you want to (re)build the EEC Pro vector index locally — for instance to push it to your own Cloudflare account — see [`eplan-eecpro-rag-builder/README.md`](eplan-eecpro-rag-builder/README.md).
-
 ## Adding New EPLAN Actions
 
 The local MCP server registers tools **dynamically** from each actions package's
@@ -90,7 +88,7 @@ The local MCP server registers tools **dynamically** from each actions package's
 
 ### 1. Implement the action
 
-In `eplan-p8-mcp-server/mcp_server/api/v2/actions/<your_module>.py`:
+In `eplan-p8-mcp-server/mcp_server/api/actions/<your_module>.py`:
 
 ```python
 def open_project(project_path: str, open_mode: str = None) -> dict:
@@ -110,12 +108,22 @@ def open_project(project_path: str, open_mode: str = None) -> dict:
 ### 2. Export it
 
 Add the function to the imports **and** to `__all__` in
-`eplan-p8-mcp-server/mcp_server/api/v2/actions/__init__.py`. It is then
-auto-registered as `eplan_v2_open_project` (and `eplan_v1_*` if added to V1 too).
+`eplan-p8-mcp-server/mcp_server/api/actions/__init__.py`. It is then
+auto-registered as `eplan_open_project`.
 
 ### 3. Restart the MCP server
 
 The new tool becomes available after restarting Claude / the server.
+
+### 4. Validate against the official docs (optional)
+
+`eplan-p8-mcp-server/tools/validate_actions.py` cross-checks every action name
+and parameter declared in the wrappers against the official EPLAN docs RAG and
+writes a markdown report:
+
+```bash
+python eplan-p8-mcp-server/tools/validate_actions.py
+```
 
 ![EPLAN test](image-1.png)
 
@@ -124,18 +132,27 @@ The new tool becomes available after restarting Claude / the server.
 1. **Verify against the docs** — use the remote P8 RAG (`https://rag2026.covaga.xyz`) to confirm the exact EPLAN action name and parameters.
 2. **Write meaningful docstrings + type hints** — they become the tool description and input schema the LLM sees and relies on.
 3. **Handle paths carefully** — Windows paths need escaping (`\\`) or forward slashes (`/`).
-4. **Prefer V2** for unattended runs — it suppresses dialogs and returns result parameters.
 
-## Changing EPLAN Version
+## EPLAN Version Selection (automatic)
 
-The target EPLAN version is configured in **4 files**. Update all of them when switching versions (e.g. `"2026"` → `"2027"`):
+There is **nothing to configure**. On startup the server scans
+`C:\Program Files\EPLAN\Platform` for installed versions and:
 
-| File | What to change |
-|------|----------------|
-| `eplan-p8-mcp-server/mcp_server/server.py` | `TARGET_VERSION = "2027"` |
-| `eplan-p8-mcp-server/mcp_server/api/v1/actions/_base.py` | `TARGET_VERSION = "2027"` |
-| `eplan-p8-mcp-server/mcp_server/api/v2/actions/_base.py` | `TARGET_VERSION = "2027"` |
-| `eplan-p8-mcp-server/mcp_server/eplan_connection.py` | default `target_version` in `__init__` and `get_manager` |
+- **Auto mode (default):** `eplan_connect` targets the **newest installed
+  version** and picks the right .NET runtime automatically (coreclr for
+  EPLAN 2027+, .NET Framework for 2026 and older).
+- **Explicit mode (LLM's choice):** the LLM can call `eplan_versions` to list
+  what is installed and then connect to a specific one with
+  `eplan_connect(version="2026")` — e.g. "connect to eplan 2026".
+
+Notes:
+- EPLAN installed somewhere non-standard? Set the `EPLAN_PLATFORM_ROOT`
+  environment variable to its `Platform` folder.
+- Once one version's DLLs are loaded into the process, switching to another
+  version requires restarting the MCP server (a .NET runtime cannot be swapped
+  at runtime).
+- `eplan_connect` also accepts a `host` (and `"host:port"`) to reach an EPLAN
+  instance on another machine; port auto-detection only works on localhost.
 
 ## Resources
 

@@ -24,30 +24,29 @@ guess EPLAN action parameters**.
 
 ## 2. The local `eplan` action server
 
-It exposes **304 tools**:
+It exposes **156 tools**:
 
-- **6 connection/utility tools** (version-agnostic): `eplan_servers`,
-  `eplan_connect`, `eplan_status`, `eplan_ping`, `eplan_test`, `eplan_disconnect`.
-- **149 EPLAN actions × 2 execution modes** → `eplan_v1_<action>` and
-  `eplan_v2_<action>`.
+- **7 connection/utility tools**: `eplan_versions`, `eplan_servers`,
+  `eplan_connect`, `eplan_status`, `eplan_ping`, `eplan_test`,
+  `eplan_disconnect`.
+- **149 EPLAN actions** → `eplan_<action>` (e.g. `eplan_open_project`).
+
+The EPLAN version is auto-detected (newest installed). If the user wants a
+specific version, call `eplan_versions` to list what is installed, then
+`eplan_connect(version="2026")`. Decide the version BEFORE the first connect —
+once one version's DLLs are loaded, switching requires restarting the server.
+
+Every action runs inside a C# script in EPLAN's process under `QuietMode`
+(no dialogs). It is silent, safe for unattended/batch use, and returns values
+EPLAN wrote back to the calling context (e.g. `PROJECT`, `PAGES`).
 
 Each tool already carries its own description and parameter schema (generated
 from the Python docstring + type hints). **Read the tool's own description before
 calling it** — this guide is the map, the tool schemas are the territory.
 
-### V1 vs V2 — which to use
-
-- **`eplan_v2_*` (DEFAULT, recommended).** The action runs inside a C# script in
-  EPLAN's process under `QuietMode` (no dialogs). It is silent, safe for
-  unattended/batch use, and returns values EPLAN wrote back to the calling
-  context (e.g. `PROJECT`, `PAGES`). Prefer this unless you have a reason not to.
-- **`eplan_v1_*`.** Direct execution via the Remote API. Faster, but EPLAN may
-  pop up dialogs that block until a human responds. Use only for simple or
-  intentionally interactive tasks.
-
 ### Result shape
 
-Tools return JSON. V2 actions typically return:
+Tools return JSON. Actions typically return:
 
 ```json
 { "success": true, "parameters": { "PROJECT": "C:\\...\\Proj.elk" } }
@@ -57,20 +56,23 @@ Tools return JSON. V2 actions typically return:
 read the message; it usually points at a bad parameter or a missing precondition
 (e.g. no project open).
 
+`success: true` from a directly-executed utility (`RegisterScript`,
+`ExecuteScript`, `UnregisterScript`) only means EPLAN accepted the call.
+
 ---
 
 ## 3. Standard workflow
 
 1. **Check / connect first.** Call `eplan_status` (or `eplan_servers` →
-   `eplan_connect`). Almost every action needs an open connection. Port is
-   auto-detected; if `eplan_servers` returns `[]` the connection still works via
+   `eplan_connect`). Almost every action needs an open connection. Port and
+   EPLAN version are auto-detected; pass `version` only if the user asks for a
+   specific one. If `eplan_servers` returns `[]` the connection still works via
    the default port (49152) — that empty list is a known limitation, not a
-   failure.
+   failure. To reach EPLAN on another machine pass `host` (port required then).
 2. **Pick the project context.** Most actions take an optional `project_name`. If
    omitted, EPLAN uses the **currently selected/open** project. Use
-   `eplan_v2_get_current_project` to confirm what that is.
-3. **Prefer V2.** Call `eplan_v2_<action>` with the parameters from the tool
-   schema.
+   `eplan_get_current_project` to confirm what that is.
+3. **Call `eplan_<action>`** with the parameters from the tool schema.
 4. **Verify unknowns via the RAG** before constructing raw actions or custom
    scripts.
 5. **Report results** from the returned JSON honestly (including `success: false`).
@@ -79,7 +81,7 @@ read the message; it usually points at a bad parameter or a missing precondition
 
 ## 4. What you can DO (capability map)
 
-All of these exist as both `eplan_v1_*` and `eplan_v2_*`:
+All of these exist as `eplan_*` tools:
 
 - **Projects:** open, close, get current, compress, synchronize, upgrade, set
   language, switch type, project management tasks.
@@ -112,33 +114,35 @@ All of these exist as both `eplan_v1_*` and `eplan_v2_*`:
 - **Production:** NC data, production wiring.
 - **Ribbon & add-ons:** export/import ribbon bar, load API module, register/
   unregister add-on, and `execute_raw_action` for any action not wrapped.
-- **Scripted advanced APIs (`eplan_v2_*` only, run as C#):** direct **parts
-  database** queries (`parts_db_*`), **typed settings** get/set
+- **Scripted advanced APIs (run as C#):** direct **parts database** queries
+  (`parts_db_*`), **typed settings** get/set
   (`settings_get/set_string|bool|int|double`), **PathMap** variable substitution,
   and `execute_custom_script` to run arbitrary C# inside EPLAN.
 
 ### Escape hatches
 
-- `eplan_v2_execute_raw_action("ActionName /PARAM:value ...")` — run any EPLAN
+- `eplan_execute_raw_action("ActionName /PARAM:value ...")` — run any EPLAN
   action string directly (still wrapped in QuietMode). Use after confirming the
   syntax with the RAG.
-- `eplan_v2_execute_custom_script(<C# code>)` — run a full C# script with access
+- `eplan_execute_custom_script(<C# code>)` — run a full C# script with access
   to `Eplan.EplApi.*`. Write results to `{{RESULT_PATH}}` as JSON.
 
 ---
 
 ## 5. What you can CONFIGURE
 
-- **Target EPLAN version** (e.g. 2025 → 2026): edit `TARGET_VERSION` in **4
-  files** — `server.py`, `api/v1/actions/_base.py`, `api/v2/actions/_base.py`,
-  and the default `target_version` in `eplan_connection.py`. Then restart.
+- **Target EPLAN version:** auto-detected (newest installed). Override per
+  session with `eplan_connect(version="2026")`; list options with
+  `eplan_versions`. Non-standard install path: set the `EPLAN_PLATFORM_ROOT`
+  environment variable. Switching versions after DLLs are loaded requires a
+  server restart.
 - **Add a new action / tool:** implement a function in
-  `api/v2/actions/<module>.py` (and/or V1), export it in that package's
-  `__init__.py` `__all__`, restart. It auto-registers as `eplan_v2_<name>`. The
+  `api/actions/<module>.py`, export it in that package's
+  `__init__.py` `__all__`, restart. It auto-registers as `eplan_<name>`. The
   docstring + type hints become the tool description and schema you will see.
-- **EPLAN settings at runtime:** via `eplan_v2_set_setting` /
-  `eplan_v2_set_project_setting` (action params `set`/`value`/`index`) or the
-  typed `eplan_v2_settings_set_*` scripted tools.
+- **EPLAN settings at runtime:** via `eplan_set_setting` /
+  `eplan_set_project_setting` (action params `set`/`value`/`index`) or the
+  typed `eplan_settings_set_*` scripted tools.
 - **The MCP registration itself:** `claude mcp add eplan -- python .../server.py`.
 
 ---

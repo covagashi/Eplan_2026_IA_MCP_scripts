@@ -1,21 +1,19 @@
-# EPLAN MCP Server (Dual API Mode)
+# EPLAN MCP Server
 
 Remote control of **EPLAN Electric P8** from an LLM (e.g. Claude) via MCP (Model Context Protocol).
 
 The server connects to a running EPLAN instance through the EPLAN Remote Client API
-(pythonnet / CLR) and exposes **304 MCP tools**: 6 connection/utility tools plus
-**149 EPLAN actions in two execution flavours** (V1 and V2).
+(pythonnet / CLR) and exposes **156 MCP tools**: 7 connection/utility tools plus
+**149 EPLAN actions** (`eplan_*`).
 
-- **V1 (Direct Execution)** — `eplan_v1_*`
-  Calls EPLAN actions directly via the Remote Client API (`client.ExecuteAction`).
-  Fast, but EPLAN may show interactive dialogs (confirmations, file pickers, …)
-  that block unattended execution.
+The EPLAN version is **auto-detected** (newest installed under
+`C:\Program Files\EPLAN\Platform`); the LLM can override it per session via
+`eplan_connect(version=...)`.
 
-- **V2 (C# Scripted Execution — Recommended)** — `eplan_v2_*`
-  Wraps each EPLAN action in a dynamically generated C# script executed **inside
-  EPLAN's process** under `QuietMode` (`QuietModes.ShowNoDialogs`). Completely
-  silent, prevents blocking dialogs, and reads return values back from the
-  `ActionCallingContext`. Use this for batch / headless automation.
+Every action is wrapped in a dynamically generated C# script executed **inside
+EPLAN's process** under `QuietMode` (`QuietModes.ShowNoDialogs`). Completely
+silent, prevents blocking dialogs, and reads return values back from the
+`ActionCallingContext` — safe for batch / headless automation.
 
 ---
 
@@ -24,19 +22,15 @@ The server connects to a running EPLAN instance through the EPLAN Remote Client 
 ```
 LLM (Claude)  -->  MCP Protocol  -->  FastMCP Server (server.py)
                                            |
-                              +------------+------------+
-                              |                         |
-                           [API V1]                  [API V2]
-                     Direct Remoting API        C# Script Generator
-                     (client.ExecuteAction)   (QuietModeStep wrapper)
-                              |                         |
-                              +------------+------------+
+                                           v
+                                  C# Script Generator
+                                 (QuietModeStep wrapper)
                                            |
                                            v
                                  EPLAN Process (P8)
 ```
 
-How V2 works internally (`eplan_connection.py::execute_action(action, quiet_mode=True)`):
+How execution works internally (`eplan_connection.py::execute_action(action, quiet_mode=True)`):
 
 1. Parse the action name and parameters.
 2. Generate a `.cs` script that runs the action inside
@@ -45,34 +39,35 @@ How V2 works internally (`eplan_connection.py::execute_action(action, quiet_mode
 4. Return `{"success": bool, "parameters": {...}}`, where `parameters` are the
    values EPLAN wrote back into the `ActionCallingContext` (e.g. `PROJECT`, `PAGES`).
 
+The script-management utilities themselves (`RegisterScript`, `ExecuteScript`,
+`UnregisterScript`) always run directly to avoid infinite recursion.
+
 ---
 
 ## Directory Structure
 
 ```
-eplan-p8-mcp-server/mcp_server/
-├── api/
-│   ├── v1/
-│   │   ├── actions/          # Direct-execution python action wrappers
-│   │   │   ├── _base.py      # _get_connected_manager, _build_action, TARGET_VERSION
-│   │   │   └── *.py          # one module per action category
-│   │   └── __init__.py
-│   └── v2/
-│       ├── actions/          # QuietMode wrappers (forced quiet_mode=True)
-│       │   ├── _base.py      # V2ManagerWrapper (forces QuietMode), TARGET_VERSION
-│       │   ├── scripted.py   # advanced APIs via C# (parts DB, typed settings, PathMap)
-│       │   └── *.py          # one module per action category
-│       └── __init__.py       # re-exports every action and defines __all__
-├── scripts/
-│   ├── generated/            # temporary C# scripts (auto-created, auto-deleted)
-│   └── results/              # temporary JSON results (auto-created, auto-deleted)
-├── server.py                 # MCP server: connection tools + dynamic V1/V2 registration
-├── eplan_connection.py       # EPLAN pythonnet connection manager + QuietMode wrapper
-├── requirements.txt
-└── README.md                 # This file
+eplan-p8-mcp-server/
+├── mcp_server/
+│   ├── api/
+│   │   └── actions/              # QuietMode python action wrappers
+│   │       ├── _base.py          # QuietManagerWrapper, _build_action
+│   │       ├── scripted.py       # advanced APIs via C# (parts DB, typed settings, PathMap)
+│   │       ├── __init__.py       # re-exports every action and defines __all__
+│   │       └── *.py              # one module per action category
+│   ├── scripts/
+│   │   ├── generated/            # temporary C# scripts (auto-created, auto-deleted)
+│   │   └── results/              # temporary JSON results (auto-created, auto-deleted)
+│   ├── server.py                 # MCP server: connection tools + dynamic action registration
+│   ├── eplan_connection.py       # connection manager + QuietMode wrapper + version auto-detection
+│   ├── requirements.txt
+│   └── README.md                 # This file
+└── tools/
+    ├── validate_actions.py       # cross-check wrappers against the official docs RAG
+    └── action_validation_report.md
 ```
 
-> Note: both `eplan_connection.py` and `api/*/actions/scripted.py` write their
+> Note: both `eplan_connection.py` and `api/actions/scripted.py` write their
 > temporary scripts/results under the single `scripts/generated` and
 > `scripts/results` folders.
 
@@ -123,28 +118,26 @@ Start EPLAN, open Claude Code, and say `connect to eplan`.
 
 ## Tools
 
-### 1. Connection & utility tools (version-agnostic)
+### 1. Connection & utility tools
 
 | Tool | Description |
 |------|-------------|
+| `eplan_versions` | List installed EPLAN versions (from disk, loads no DLLs). |
 | `eplan_servers` | Detect active EPLAN instances on the machine. |
-| `eplan_connect` | Connect to EPLAN (port auto-detected if omitted). |
-| `eplan_status` | Current connection details. |
+| `eplan_connect` | Connect to EPLAN. Optional `host` (remote machines, `"host:port"` accepted), `port` (auto-detected on localhost) and `version` (auto = newest installed). |
+| `eplan_status` | Current connection details, including the targeted version. |
 | `eplan_ping` | Check the connected instance is responding. |
 | `eplan_test` | Show a MessageBox inside EPLAN to verify end-to-end communication. |
 | `eplan_disconnect` | Close the active connection. |
 
-### 2. Versioned action tools (149 per version)
+### 2. Action tools (149)
 
-Every EPLAN action is exposed in two forms, named `eplan_v1_<action>` and
-`eplan_v2_<action>`. Each tool's description and input schema are generated from
-the underlying Python function's docstring and type hints, so the connected LLM
-discovers what is available and how to call it automatically.
+Every EPLAN action is exposed as `eplan_<action>`. Each tool's description and
+input schema are generated from the underlying Python function's docstring and
+type hints, so the connected LLM discovers what is available and how to call it
+automatically.
 
-- **V1 (`eplan_v1_*`)** — direct execution. Use only for simple/interactive tasks.
-- **V2 (`eplan_v2_*`, recommended)** — QuietMode + return-value capture.
-
-Action categories (each available in both V1 and V2):
+Action categories:
 
 | Category | Examples |
 |----------|----------|
@@ -173,16 +166,16 @@ Action categories (each available in both V1 and V2):
 | Cabinet / 3D | `calculate_cabinet_weight`, `update_segments_filling`, `topology_operation`, `import_preplanning_data`, `export/import_segments_template` |
 | Production | `export_nc_data`, `export_production_wiring` |
 | Ribbon / add-ons | `export/import_ribbon_bar`, `load_api_module`, `register/unregister_addon`, `execute_raw_action` |
-| Scripted (V2-style, advanced APIs) | `parts_db_query/count/get_part/update/list_product_groups`, `settings_get/set_string/bool/int/double`, `pathmap_substitute`, `pathmap_get_common_paths`, `execute_custom_script` |
+| Scripted (advanced APIs via C#) | `parts_db_query/count/get_part/update/list_product_groups`, `settings_get/set_string/bool/int/double`, `pathmap_substitute`, `pathmap_get_common_paths`, `execute_custom_script` |
 
 ---
 
 ## Extending: add a new action
 
-The server registers tools **dynamically** from each actions package's `__all__`
+The server registers tools **dynamically** from the actions package's `__all__`
 list — there is no per-tool `@mcp.tool()` boilerplate to write.
 
-1. Implement the function in `api/v2/actions/<module>.py` (and/or `api/v1/...`):
+1. Implement the function in `api/actions/<module>.py`:
 
    ```python
    def my_action(project_name: str = None) -> dict:
@@ -198,40 +191,45 @@ list — there is no per-tool `@mcp.tool()` boilerplate to write.
        return manager.execute_action(action)
    ```
 
-2. Export it in `api/v2/actions/__init__.py`: add it to the imports **and** to
+2. Export it in `api/actions/__init__.py`: add it to the imports **and** to
    `__all__`.
 
-3. Restart the MCP server. The tool appears as `eplan_v2_my_action`.
+3. Restart the MCP server. The tool appears as `eplan_my_action`.
 
 Tips:
 - Write a meaningful docstring + type hints — they become the tool description
   and input schema the LLM relies on.
 - Verify action names/parameters against the official EPLAN P8 docs (see the
-  remote RAG at `https://rag2026.covaga.xyz`).
+  remote RAG at `https://rag2026.covaga.xyz`), then run
+  `python ../tools/validate_actions.py` to cross-check the whole wrapper set.
 - Windows paths need escaping (`\\`) or forward slashes (`/`).
 
 ---
 
-## Changing the target EPLAN version
+## EPLAN version selection (automatic)
 
-The version (e.g. `"2026"` → `"2027"`) is set in **4 files** — update all:
+Nothing to configure. `eplan_connection.py::detect_installed_versions()` scans
+`C:\Program Files\EPLAN\Platform` (override with the `EPLAN_PLATFORM_ROOT`
+environment variable) and:
 
-| File | What to change |
-|------|----------------|
-| `server.py` | `TARGET_VERSION = "2027"` |
-| `api/v1/actions/_base.py` | `TARGET_VERSION = "2027"` |
-| `api/v2/actions/_base.py` | `TARGET_VERSION = "2027"` |
-| `eplan_connection.py` | default `target_version` in `__init__` and `get_manager` |
+- **Auto (default):** targets the newest installed version and selects the
+  matching .NET runtime (coreclr for EPLAN 2027+, .NET Framework for ≤ 2026).
+- **Explicit:** `eplan_connect(version="2026")` targets a specific major
+  version; `eplan_versions` lists the options without loading any DLLs.
+
+Once one version's DLLs are loaded into the process, switching versions
+requires restarting the MCP server (the .NET runtime cannot be swapped at
+runtime).
 
 ---
 
 ## Example session
 
 ```
-User: Connect to EPLAN and open "C:\Projects\Test.elk" silently.
-LLM:  [eplan_connect]            -> Connected on port 49152
-      [eplan_v2_open_project]    -> {"success": true, "parameters": {"PROJECT": "C:\\Projects\\Test.elk"}}
-      Project opened in silent mode (V2 / QuietMode).
+User: Connect to EPLAN and open "C:\Projects\Test.elk".
+LLM:  [eplan_connect]         -> Connected on port 49152
+      [eplan_open_project]    -> {"success": true, "parameters": {"PROJECT": "C:\\Projects\\Test.elk"}}
+      Project opened silently (QuietMode).
 ```
 
 See [`../../llm.md`](../../llm.md) for an operating guide aimed at the connected LLM.
