@@ -57,7 +57,7 @@ class EPLANConnectionManager:
     DEFAULT_HOST = "localhost"
     TIMEOUT_SECONDS = 10
 
-    def __init__(self, target_version: str = "2027"):
+    def __init__(self, target_version: str = "2026"):
         self.target_version = target_version
         self.client = None
         self.connected = False
@@ -421,7 +421,7 @@ public class QuietExecute_{exec_id}
 _manager: Optional[EPLANConnectionManager] = None
 
 
-def get_manager(target_version: str = "2027") -> EPLANConnectionManager:
+def get_manager(target_version: str = "2026") -> EPLANConnectionManager:
     global _manager
     if _manager is None or not _manager._clr_initialized:
         _manager = EPLANConnectionManager(target_version)

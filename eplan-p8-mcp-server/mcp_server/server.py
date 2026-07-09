@@ -16,7 +16,7 @@ import functools
 from mcp.server.fastmcp import FastMCP
 from eplan_connection import get_manager
 
-TARGET_VERSION = "2027"
+TARGET_VERSION = "2026"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 mcp = FastMCP("EPLAN MCP Server")
@@ -49,10 +49,27 @@ def eplan_servers() -> str:
 
 
 @mcp.tool()
-def eplan_connect(port: str = None) -> str:
-    """Connect to EPLAN. Port is auto-detected if not specified."""
+def eplan_connect(host: str = None, port: str = None) -> str:
+    """Connect to EPLAN.
+
+    Args:
+        host: EPLAN machine to connect to. Defaults to "localhost". Set this to
+            reach an EPLAN instance on another machine (e.g. "10.10.10.2"). You
+            may also pass "host:port" as this argument and it will be split.
+        port: Remoting port. Auto-detected from local servers if omitted, but
+            auto-detection only works for localhost — when connecting to a
+            remote host you must supply the port explicitly (default 49152).
+    """
+    # Allow "10.10.10.2:49152" passed as either host or port.
+    if host and ":" in host and port is None:
+        host, port = host.rsplit(":", 1)
+    elif port and ":" in port:
+        maybe_host, maybe_port = port.rsplit(":", 1)
+        if maybe_port.isdigit():
+            host, port = maybe_host, maybe_port
+
     manager = get_manager(TARGET_VERSION)
-    return json.dumps(manager.connect(port=port), indent=2)
+    return json.dumps(manager.connect(host=host, port=port), indent=2)
 
 
 @mcp.tool()
