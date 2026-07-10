@@ -159,3 +159,5 @@ Notes:
 - [EPLAN API Documentation](https://www.eplan.help/)
 - [MCP Protocol Specification](https://modelcontextprotocol.io/)
 - [Claude Code Documentation](https://docs.anthropic.com/claude-code)
+---
+  [![MCP Badge](https://lobehub.com/badge/mcp/covagashi-eplan_2026_ia_mcp_scripts)](https://lobehub.com/mcp/covagashi-eplan_2026_ia_mcp_scripts)
