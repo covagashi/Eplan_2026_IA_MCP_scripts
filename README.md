@@ -1,3 +1,10 @@
+# THIS IS UNDER DEVELOPMENT !!!!
+```
+CLAUDE OR ANY AI STILL DON'T  UNDERSTAND THE CONTEXT ABOUT HOW TO USE THE TOOL, NO UNLESS IT'S GUIDED AND PLANNED. BE CAREFUL
+```
+
+
+
 # EPLAN AI Automation Toolkit
 
 A collection of AI-assisted automation tools for **EPLAN Electric P8** and **EPLAN EEC Pro 2026**, built around the Model Context Protocol (MCP).
