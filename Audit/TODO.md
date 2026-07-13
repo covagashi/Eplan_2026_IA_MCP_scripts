@@ -33,6 +33,16 @@ EPLAN, veía el texto completo del error (ej. *"El idioma no es válido. Nombre 
 parámetro: strLanguage"*). La LLM literalmente no tiene acceso a esa información salvo
 que el usuario la copie y pegue a mano — que es exactamente lo que pasó.
 
+**Matiz adicional, confirmado 2026-07-13 con `restore_masterdata`**: `success:false`
+tampoco es fiable como señal de "la acción no hizo nada". Probado con `destination_path`
+igual a la carpeta que contenía el propio `archive_name` (comportamiento de overwrite
+esperado, no un bug — aclarado por Christian): la llamada devolvió `{"success": false}`
+sin mensaje, pero el overwrite sobre `destination_path` sí ocurrió, afectando archivos
+hermanos no relacionados que estaban en esa carpeta. Un fix de este punto (1) idealmente
+capturaría también ese desfase entre el flag `success` y lo que realmente pasó en
+disco, no solo el mensaje de la excepción cuando la hay. Ver
+`Audit/01-project-workspace-backup.md`, fila `restore_masterdata`.
+
 ### Opciones de fix (de menor a mayor esfuerzo)
 
 1. **Reemplazar `CommandLineInterpreter.Execute` por la clase `Action` directa**
