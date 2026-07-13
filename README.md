@@ -94,12 +94,14 @@ See [`cloudflare-rag-eplan-p8/README.md`](cloudflare-rag-eplan-p8/README.md) and
 
 While the MCP servers let Claude *act* on EPLAN, the skill teaches Claude to *write correct EPLAN code*: scripting entry points, verified action parameters, parts-database access, Remote Client automation (dynamic ports, headless EPLAN, Cogineer), and the production pitfalls (pseudo-async command blocking, message-loop monitor thread, dispose discipline, EPLAN 2025 remoting changes).
 
-```bash
-# install as a personal skill (Windows)
-xcopy /E /I claude-skills\eplan-development %USERPROFILE%\.claude\skills\eplan-development
+Install from Claude Code (this repo is also a plugin marketplace):
+
+```
+/plugin marketplace add covagashi/Eplan_2026_IA_MCP_scripts
+/plugin install eplan-development@eplan-tools
 ```
 
-See [`claude-skills/eplan-development/README.md`](claude-skills/eplan-development/README.md).
+See [`claude-skills/eplan-development/README.md`](claude-skills/eplan-development/README.md) for manual installation and details.
 
 ## Adding New EPLAN Actions
 

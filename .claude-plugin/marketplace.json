@@ -1,0 +1,32 @@
+{
+  "name": "eplan-tools",
+  "owner": {
+    "name": "covagashi",
+    "url": "https://github.com/covagashi"
+  },
+  "metadata": {
+    "description": "AI-assisted tooling for EPLAN Electric P8: development skills, MCP servers, and documentation RAGs",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "eplan-development",
+      "source": "./claude-skills/eplan-development",
+      "description": "Teach Claude to develop with EPLAN Electric P8: C# scripting, EPLAN API (parts database), Remote Client automation, verified action parameters, and production pitfalls. Covers EPLAN 2022-2025.",
+      "version": "1.0.0",
+      "author": {
+        "name": "covagashi",
+        "url": "https://github.com/covagashi"
+      },
+      "license": "MIT",
+      "keywords": [
+        "eplan",
+        "eplan-p8",
+        "electrical-engineering",
+        "csharp",
+        "automation"
+      ],
+      "category": "development"
+    }
+  ]
+}

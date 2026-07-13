@@ -7,33 +7,44 @@ When installed, Claude automatically loads this knowledge whenever you ask it to
 ## Contents
 
 ```
-eplan-development/
-├── SKILL.md                          # Entry point: dev models, golden rules, RAG usage
-└── references/
-    ├── script-basics.md              # Script structure, [Start]/[DeclareAction]/events, deployment
-    ├── actions-reference.md          # CommandLineInterpreter + verified action catalog
-    ├── core-classes.md               # Progress, PathMap, Settings, MultiLangString, ribbon
-    ├── api-data-access.md            # Parts DB (MDPartsManagement), properties, multilang parsing
-    ├── remoting.md                   # EplanRemoteClient, dynamic ports, headless, Cogineer
-    ├── pitfalls.md                   # Blocking issue, threading, dispose, error handling
-    └── integration-patterns.md       # HTTP, SignalR, error forwarding, HTML tools
+eplan-development/                    # plugin root
+├── .claude-plugin/plugin.json
+└── skills/eplan-development/
+    ├── SKILL.md                      # Entry point: dev models, golden rules, RAG usage
+    └── references/
+        ├── script-basics.md          # Script structure, [Start]/[DeclareAction]/events, deployment
+        ├── actions-reference.md      # CommandLineInterpreter + verified action catalog
+        ├── core-classes.md           # Progress, PathMap, Settings, MultiLangString, ribbon
+        ├── api-data-access.md        # Parts DB (MDPartsManagement), properties, multilang parsing
+        ├── remoting.md               # EplanRemoteClient, dynamic ports, headless, Cogineer
+        ├── pitfalls.md               # Blocking issue, threading, dispose, error handling
+        └── integration-patterns.md   # HTTP, SignalR, error forwarding, HTML tools
 ```
 
 ## Install
 
-### Personal (available in all your projects)
+### As a plugin (recommended — one-time setup, easy updates)
+
+Inside Claude Code:
+
+```
+/plugin marketplace add covagashi/Eplan_2026_IA_MCP_scripts
+/plugin install eplan-development@eplan-tools
+```
+
+Update later with `/plugin marketplace update eplan-tools`.
+
+### Manual (copy the skill folder)
 
 ```bash
 git clone https://github.com/covagashi/Eplan_2026_IA_MCP_scripts
-# Windows
-xcopy /E /I Eplan_2026_IA_MCP_scripts\claude-skills\eplan-development %USERPROFILE%\.claude\skills\eplan-development
+# Windows — personal skill, available in all projects
+xcopy /E /I Eplan_2026_IA_MCP_scripts\claude-skills\eplan-development\skills\eplan-development %USERPROFILE%\.claude\skills\eplan-development
 # macOS / Linux
-cp -r Eplan_2026_IA_MCP_scripts/claude-skills/eplan-development ~/.claude/skills/eplan-development
+cp -r Eplan_2026_IA_MCP_scripts/claude-skills/eplan-development/skills/eplan-development ~/.claude/skills/eplan-development
 ```
 
-### Per project
-
-Copy the folder to `<your-project>/.claude/skills/eplan-development` instead.
+For a single project, copy to `<your-project>/.claude/skills/eplan-development` instead.
 
 Restart Claude Code (or start a new session). The skill activates automatically on EPLAN-related tasks, or invoke it explicitly with `/eplan-development`.
 
