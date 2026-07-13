@@ -2,7 +2,6 @@
 Project management actions.
 """
 
-from typing import List
 from ._base import _get_connected_manager, _build_action
 
 
@@ -71,6 +70,11 @@ def project_management(
     Project management operations.
     Action: projectmanagement
 
+    To create a copy/duplicate of a project (e.g. "make a copy of X",
+    "duplicate this project"), use type="CREATESNAPSHOTCOPY" - see its
+    entry below for exact parameters. It is the correct tool for that
+    request, not a file-system copy of the .elk/.edb.
+
     IMPORTANT: Always ask the user for the exact project_name (full path,
     e.g. "C:\\Projects\\EPLAN\\Sample.elk") before calling this - never guess
     or reuse a previously-seen path. Per the official docs, PROJECTNAME is
@@ -94,10 +98,13 @@ def project_management(
     guessed from the docstring):
 
     - "READPROJECTINFO": NOT read-only despite the name - it imports data
-      FROM an XML file INTO the project (a write). Requires `filename`
-      pointing at a real "ProjectInfo.xml"-schema file (one exists inside
-      any project's own `<project>.edb/ProjectInfo.xml` - use that as a
-      reference/source, not an arbitrary XML). Feeding it an XML of a
+      FROM an XML file INTO the project (a write). It reads project info
+      formatted as EPLAN's own "ProjectInfo.xml" - every project already
+      has one of these, sitting inside its `.edb` folder at
+      `<project>.edb\\ProjectInfo.xml`. In practice `filename` should point
+      at that file, either from the same project (self-referential
+      refresh) or copied from a different project's `.edb` folder if the
+      goal is to bring in that project's info. Feeding it an XML of a
       different schema (e.g. a PropertyView export) still returns
       success:true - do not treat that as confirmation it worked.
 
@@ -135,14 +142,21 @@ def project_management(
       project database is reduced in size." Only purges data already marked
       deleted (doesn't touch active/live data), but that purge cannot be
       undone. Confirmed on disk: internal database files were rewritten and
-      shrank measurably. Always confirm with the user before calling.
+      shrank measurably. Always confirm with the user before calling. Not
+      to be confused with the separate compress_project tool, which also
+      reduces project file size but by removing unused macros/parts instead
+      of purging already-deleted data - different mechanism, different tool.
 
     - "CORRECTPROJECTITEMS": designed to automatically correct, synchronize,
       and repair inconsistent elements/data within a project. Takes
       `scheme` (e.g. "Default" per official docs example). Irreversible-ish
       modification, confirm with the user first. Confirmed success:true can
       happen with zero observable effect on disk - don't assume it changed
-      anything without checking.
+      anything without checking. Despite the official docs using the word
+      "synchronize" here, this is unrelated to the separate
+      synchronize_project tool (which syncs the parts/system database) - if
+      the user wants to "synchronize" parts data, they most likely mean
+      synchronize_project, not this.
 
     - "LOADDIRECTORY": scans a directory for EPLAN projects and registers
       them in the GUI's Project Manager - does not modify the projects
@@ -187,30 +201,64 @@ def project_management(
     return manager.execute_action(action)
 
 
-def upgrade_projects(project_paths: List[str]) -> dict:
+def upgrade_projects(project_path: str = None, folder_path: str = None) -> dict:
     """
-    Upgrade projects to current database scheme version.
+    Upgrade project(s) to the current database scheme version.
     Action: XPrjActionUpgradeProjects
 
+    Pass exactly one of the two arguments:
+    - project_path: upgrade a single project file (e.g. a .elk file).
+    - folder_path: upgrade every project found in this folder and all its
+      subfolders (recursive).
+
+    Always ask the user for the exact path first (which project file, or
+    which folder) - do not guess it. This action changes the project's
+    database scheme and is effectively irreversible for that copy, so
+    confirm with the user before each call, and tell them the outcome
+    afterward.
+
+    Behavior:
+    - A backup of each project is created automatically before upgrading;
+      this wrapper does not expose a way to disable that.
+    - Does nothing (still reports success) for a project that is already on
+      the current scheme version.
+    - Basic projects (ZW9/ZX1) are only upgraded on a major version change.
+    - The result only echoes back what was sent (success + parameters). It
+      does NOT include EPLAN's own per-project result message - that stays in
+      EPLAN's message/log window. If success is false, there is no
+      diagnostic detail available here or from eplan_status; check EPLAN's
+      message window directly for the reason.
+
     Args:
-        project_paths: List of project paths to upgrade
+        project_path: Full path to a single project file to upgrade.
+        folder_path: Full path to a folder whose projects (recursively)
+            should all be upgraded.
     """
     manager, error = _get_connected_manager()
     if error:
         return error
 
-    # Build action with numbered project parameters
-    parts = ["XPrjActionUpgradeProjects"]
-    for i, path in enumerate(project_paths, 1):
-        parts.append(f'/PROJECT{i}:"{path}"')
-
-    return manager.execute_action(" ".join(parts))
+    if project_path and folder_path:
+        return {"success": False, "error": "Pass only one of project_path or folder_path, not both."}
+    if folder_path:
+        return manager.execute_action(f'XPrjActionUpgradeProjects /Folder:"{folder_path}"')
+    if project_path:
+        return manager.execute_action(f'XPrjActionUpgradeProjects /Project:"{project_path}"')
+    return {"success": False, "error": "Must provide either project_path or folder_path."}
 
 
 def compress_project(project_name: str = None) -> dict:
     """
-    Compress a project to reduce file size.
+    Compress a project to reduce its file size.
     Action: compress
+
+    Removes macros and articles (parts) that are not actually used anywhere
+    in the project - it is a cleanup of unused embedded data, not a
+    reorganize/defragment of the database and not a zip-style archive. Ask
+    the user for the project path if it's not obvious which project they
+    mean; if project_name is omitted, behavior is unconfirmed (may target
+    whichever project currently has focus in the EPLAN GUI, similar to
+    close_project).
     """
     manager, error = _get_connected_manager()
     if error:
@@ -223,10 +271,55 @@ def compress_project(project_name: str = None) -> dict:
     return manager.execute_action(action)
 
 
-def synchronize_project(project_name: str = None) -> dict:
+def synchronize_project(project_name: str = None, type: str = None, store_mode: int = None) -> dict:
     """
-    Synchronize project data.
+    Synchronize project data with the EPLAN parts/system database.
     Action: synchronize
+
+    Not to be confused with project_management's CORRECTPROJECTITEMS type,
+    whose official EPLAN description also happens to use the word
+    "synchronize" but which does unrelated data-consistency repair, not
+    parts-database sync. If the user wants to sync parts between a project
+    and the shared system database, this tool is the right one.
+
+    Always ask the user for the exact project_name (full path) before
+    calling - never omit it and never guess it. The underlying EPLAN action
+    treats PROJECTNAME as optional and falls back to whichever project has
+    focus in the GUI, but that fallback only works when the action is
+    triggered from inside the GUI (script/ribbon bar); when invoked
+    programmatically like this MCP server does, omitting it throws an
+    exception instead of defaulting sensibly.
+
+    Args:
+        project_name: Project name with full path. Ask the user - do not
+            guess or omit.
+        type: Type of synchronization task to perform:
+            "MULTILINE": Multi-line data synchronization.
+            "SINGLELINE": Single-line data synchronization.
+            "OVERVIEW": Overview data synchronization.
+            "SYSTEMPARTSTOPROJECT": Add system (shared) parts to this project.
+            "PARTSTOSYSTEM": Add this project's parts to the shared system
+                parts database - unlike the other TYPE values this writes to
+                data shared across every project on this EPLAN installation,
+                not just the one project passed in. Treat it as
+                higher-impact and confirm with the user before running it,
+                especially against a project that may contain throwaway/test
+                parts. If the system parts database is write-protected or
+                locked (e.g. another EPLAN session/process has it open, or
+                it's a read-only master data source), this fails with
+                `{"success": false}` and no error detail anywhere in this
+                MCP (not in the result, not in eplan_status) - the real
+                reason only shows in EPLAN's own message window (seen in
+                practice as "La base de datos está protegida contra
+                escritura" / "The database is write protected"). If this
+                TYPE fails, don't assume the call itself was malformed -
+                tell the user to check EPLAN's message window, and that a
+                locked/protected system parts database is a likely cause.
+        store_mode: Only effective when type="SYSTEMPARTSTOPROJECT". Whether
+            existing parts are overwritten:
+            0: Append only new ones (default).
+            1: Overwrite existing.
+            2: Overwrite existing and append new.
     """
     manager, error = _get_connected_manager()
     if error:
@@ -234,7 +327,9 @@ def synchronize_project(project_name: str = None) -> dict:
 
     action = _build_action(
         "synchronize",
-        PROJECTNAME=project_name
+        TYPE=type,
+        PROJECTNAME=project_name,
+        STOREMODE=store_mode
     )
     return manager.execute_action(action)
 
@@ -265,13 +360,31 @@ def get_current_project() -> dict:
 
 
 def set_project_language(
-    language: str,
+    display: str,
     project_name: str = None,
-    read_write: bool = True
+    variable: str = None,
+    source: str = None
 ) -> dict:
     """
-    Set project language.
+    Set which language(s) a project displays, and which one is active.
     Action: SetProjectLanguage
+
+    This does NOT translate any text - it only changes display settings
+    (which language(s) show, and which one is currently active/edited). The
+    project must already be open in EPLAN; ask the user for the exact
+    project_name if more than one project could be open.
+
+    Args:
+        display: Displayed language ID(s), e.g. "en_US". To display more
+            than one language at once, separate IDs with ";", e.g.
+            "en_US;de_DE;pl_PL;fr_FR".
+        project_name: Full project name/path. The project must be open.
+        variable: The "variable" (currently active) language. Either a
+            language ID directly (e.g. "de_DE"), or a positional index into
+            `display` written as "0N_0N" (e.g. "03_03" for "Displayed
+            language 3"). The index form only works for the first 5
+            displayed languages - "05_05" is the maximum.
+        source: Source language.
     """
     manager, error = _get_connected_manager()
     if error:
@@ -280,19 +393,42 @@ def set_project_language(
     action = _build_action(
         "SetProjectLanguage",
         PROJECTNAME=project_name,
-        LANGUAGE=language,
-        READWRITE="1" if read_write else "0"
+        DISPLAY=display,
+        VARIABLE=variable,
+        SOURCE=source
     )
     return manager.execute_action(action)
 
 
 def switch_project_type(
-    project_type: str,
+    project_type: int,
     project_name: str = None
 ) -> dict:
     """
-    Change the type of project.
+    Change a project's type.
     Action: SwitchProjectType
+
+    EPLAN projects are only ever one of two types:
+        1 = Schematic project
+        2 = Macro project
+
+    Always ask the user both which project (project_name) and which type
+    they want to switch to - never guess or assume either. The underlying
+    EPLAN action technically treats both as optional, but the fallbacks are
+    not safe to rely on here: omitting project_type does NOT no-op, it
+    toggles the project to whichever of the two types it is NOT currently
+    set to; omitting project_name falls back to whichever project has
+    focus in the GUI, but that fallback only works when triggered from
+    inside the GUI, not when called programmatically like this MCP server
+    does (it throws an exception instead). So always pass both explicitly.
+
+    This is a structural change to the project - confirm with the user
+    before calling.
+
+    Args:
+        project_type: 1 for Schematic project, 2 for Macro project. Ask the
+            user - do not guess or default to either.
+        project_name: Full project path. Ask the user - do not guess.
     """
     manager, error = _get_connected_manager()
     if error:

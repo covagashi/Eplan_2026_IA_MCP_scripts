@@ -61,6 +61,18 @@ def eplan_servers() -> str:
 
     Note: this loads the EPLAN DLLs (auto-detected newest version if not
     connected yet).
+
+    This can return an empty list even while EPLAN is fully open with a
+    project loaded - auto-detection is not fully reliable, particularly
+    right after EPLAN itself was just (re)started. Do not treat an empty
+    result as proof EPLAN isn't running. If eplan_connect() then also fails
+    with a connection error (e.g. gRPC "failed to connect to all
+    addresses"), fall back to asking the user to find the actual listening
+    port themselves (e.g. a TCP/port viewer filtered to EPLAN.exe, or
+    `netstat -ano | findstr LISTENING` cross-referenced with EPLAN.exe's
+    PID) rather than assuming the default port is correct - the default
+    49152 is only a guess, real instances have been seen listening on other
+    ports (e.g. 49153) especially with multiple EPLAN processes running.
     """
     manager = get_manager()
     servers = manager.get_active_servers()
@@ -78,6 +90,12 @@ def eplan_connect(host: str = None, port: str = None, version: str = None) -> st
         port: Remoting port. Auto-detected from local servers if omitted, but
             auto-detection only works for localhost — when connecting to a
             remote host you must supply the port explicitly (default 49152).
+            If the connection fails (e.g. gRPC "failed to connect to all
+            addresses") and eplan_servers() found nothing either, the default
+            port is likely wrong, not EPLAN being closed - ask the user to
+            check the real listening port for EPLAN.exe and retry with that
+            port explicitly. Do not silently retry a range of ports yourself
+            without telling the user what you're doing.
         version: EPLAN major version to target, e.g. "2026". Omit for
             auto-detection (newest installed version). Use eplan_versions to
             see what is available. Once one version's DLLs are loaded,
