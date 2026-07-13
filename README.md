@@ -20,7 +20,8 @@ The repo contains three independent sub-projects: a local MCP server that drives
 .
 ├── eplan-p8-mcp-server/          # LOCAL: MCP server that controls EPLAN P8
 ├── cloudflare-rag-eplan-p8/      # REMOTE: Cloudflare Worker that serves the P8 docs RAG over MCP
-└── cloudflare-rag-eecpro/        # REMOTE: Cloudflare Worker that serves the EEC Pro docs RAG over MCP
+├── cloudflare-rag-eecpro/        # REMOTE: Cloudflare Worker that serves the EEC Pro docs RAG over MCP
+└── claude-skills/                # SKILL: Claude Code skill for EPLAN P8 development
 ```
 
 | Folder | Type | Purpose | EPLAN product |
@@ -28,6 +29,7 @@ The repo contains three independent sub-projects: a local MCP server that drives
 | `eplan-p8-mcp-server/` | Local Python MCP | Drive a running EPLAN instance from Claude (open/close projects, exports, reports, scripts, etc.) | EPLAN Electric P8 |
 | `cloudflare-rag-eplan-p8/` | Remote Cloudflare Worker | Serve the P8 doc index as a remote MCP + REST API | EPLAN Electric P8 |
 | `cloudflare-rag-eecpro/` | Remote Cloudflare Worker | Serve the EEC Pro doc index as a remote MCP + REST API | EPLAN EEC Pro 2026 |
+| `claude-skills/eplan-development/` | Claude Code skill | Teach Claude to write correct EPLAN scripts, API code, and Remote Client apps (patterns + pitfalls) | EPLAN Electric P8 |
 
 Each sub-project has its own README with installation and usage details.
 
@@ -87,6 +89,17 @@ curl -X POST https://rag2026.covaga.xyz/search -H "Content-Type: application/jso
 ```
 
 See [`cloudflare-rag-eplan-p8/README.md`](cloudflare-rag-eplan-p8/README.md) and [`cloudflare-rag-eecpro/README.md`](cloudflare-rag-eecpro/README.md) for the tools, REST endpoints, and architecture.
+
+### Claude Code skill for EPLAN development
+
+While the MCP servers let Claude *act* on EPLAN, the skill teaches Claude to *write correct EPLAN code*: scripting entry points, verified action parameters, parts-database access, Remote Client automation (dynamic ports, headless EPLAN, Cogineer), and the production pitfalls (pseudo-async command blocking, message-loop monitor thread, dispose discipline, EPLAN 2025 remoting changes).
+
+```bash
+# install as a personal skill (Windows)
+xcopy /E /I claude-skills\eplan-development %USERPROFILE%\.claude\skills\eplan-development
+```
+
+See [`claude-skills/eplan-development/README.md`](claude-skills/eplan-development/README.md).
 
 ## Adding New EPLAN Actions
 
